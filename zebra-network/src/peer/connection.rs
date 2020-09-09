@@ -374,6 +374,12 @@ where
         use State::*;
         let ClientRequest { request, tx, span } = req;
 
+        if tx.is_canceled() {
+            metrics::counter!("peer.canceled", 1);
+            tracing::debug!("ignoring canceled request");
+            return;
+        }
+
         // XXX(hdevalence) this is truly horrible, but let's fix it later
 
         // Inner match returns Result with the new state or an error.

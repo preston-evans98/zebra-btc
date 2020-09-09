@@ -613,10 +613,18 @@ where
 
             // This span is used to help diagnose sync warnings
             let span = tracing::warn_span!("block_fetch_verify", ?hash);
-            let mut verifier = self.verifier.clone();
+            let verifier = self.verifier.clone();
+            let (cancel_tx, mut cancel_rx) = tokio::sync::oneshot::channel::<()>();
             let task = tokio::spawn(
                 async move {
-                    let block = match block_req.await {
+                    let rsp = tokio::select! {
+                        _ = &mut cancel_rx => {
+                            metrics::counter!("sync.canceled.download.count", 1);
+                            return Err(eyre!("canceled block_fetch_verify").into())
+                        },
+                        rsp = block_req => rsp,
+                    };
+                    let block = match rsp {
                         Ok(zn::Response::Blocks(blocks)) => blocks
                             .into_iter()
                             .next()
@@ -627,17 +635,18 @@ where
                     };
                     metrics::counter!("sync.downloaded.block.count", 1);
 
-                    let result = verifier
-                        .ready_and()
-                        .await
-                        .map_err(|e| eyre!(e))
-                        .wrap_err("verifier service failed to be ready")?
-                        .call(block)
-                        .await
-                        .map_err(|e| eyre!(e))
-                        .wrap_err("failed to verify block")?;
+                    let verified_hash = tokio::select! {
+                        _ = &mut cancel_rx => {
+                            metrics::counter!("sync.canceled.verify.count", 1);
+                            return Err(eyre!("canceled block_fetch_verify").into())
+                        }
+                        result = verifier.oneshot(block) => {
+                            result.map_err(|e| eyre!(e)).wrap_err("failed to verify block")?
+                        }
+                    };
                     metrics::counter!("sync.verified.block.count", 1);
-                    Result::<block::Hash, Report>::Ok(result)
+
+                    Result::<block::Hash, Report>::Ok(verified_hash)
                 }
                 .instrument(span)
                 .map_err(move |e| (e, hash)),
