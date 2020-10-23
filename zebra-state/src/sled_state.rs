@@ -3,16 +3,16 @@
 use std::{collections::HashMap, convert::TryInto, sync::Arc};
 
 use tracing::trace;
+use zebra_chain::transparent;
 use zebra_chain::{
     block::{self, Block},
     parameters::{Network, GENESIS_PREVIOUS_BLOCK_HASH},
 };
-use zebra_chain::{
-    serialization::{ZcashDeserialize, ZcashSerialize},
-    transparent,
-};
 
 use crate::{BoxError, Config, HashOrHeight, QueuedBlock};
+use sled_format::{SledDeserialize, SledSerialize};
+
+mod sled_format;
 
 /// The finalized part of the chain state, stored in sled.
 ///
@@ -38,74 +38,12 @@ pub struct FinalizedState {
     hash_by_height: sled::Tree,
     height_by_hash: sled::Tree,
     block_by_height: sled::Tree,
-    // tx_by_hash: sled::Tree,
+    tx_by_hash: sled::Tree,
     utxo_by_outpoint: sled::Tree,
     // sprout_nullifiers: sled::Tree,
     // sapling_nullifiers: sled::Tree,
     // sprout_anchors: sled::Tree,
     // sapling_anchors: sled::Tree,
-}
-
-/// Helper trait for inserting (Key, Value) pairs into sled when both the key and
-/// value implement ZcashSerialize.
-trait SledSerialize {
-    /// Serialize and insert the given key and value into a sled tree.
-    fn zs_insert<K, V>(&self, key: &K, value: &V) -> Result<(), BoxError>
-    where
-        K: ZcashSerialize,
-        V: ZcashSerialize;
-}
-
-/// Helper trait for retrieving values from sled trees when the key and value
-/// implement ZcashSerialize/ZcashDeserialize.
-trait SledDeserialize {
-    /// Serialize the given key and use that to get and deserialize the
-    /// corresponding value from a sled tree, if it is present.
-    fn zs_get<K, V>(&self, key: &K) -> Result<Option<V>, BoxError>
-    where
-        K: ZcashSerialize,
-        V: ZcashDeserialize;
-}
-
-impl SledSerialize for sled::Tree {
-    fn zs_insert<K, V>(&self, key: &K, value: &V) -> Result<(), BoxError>
-    where
-        K: ZcashSerialize,
-        V: ZcashSerialize,
-    {
-        let key_bytes = key
-            .zcash_serialize_to_vec()
-            .expect("serializing into a vec won't fail");
-
-        let value_bytes = value
-            .zcash_serialize_to_vec()
-            .expect("serializing into a vec won't fail");
-
-        self.insert(key_bytes, value_bytes)?;
-
-        Ok(())
-    }
-}
-
-impl SledDeserialize for sled::Tree {
-    fn zs_get<K, V>(&self, key: &K) -> Result<Option<V>, BoxError>
-    where
-        K: ZcashSerialize,
-        V: ZcashDeserialize,
-    {
-        let key_bytes = key
-            .zcash_serialize_to_vec()
-            .expect("serializing into a vec won't fail");
-
-        let value_bytes = self.get(&key_bytes)?;
-
-        let value = value_bytes
-            .as_deref()
-            .map(ZcashDeserialize::zcash_deserialize)
-            .transpose()?;
-
-        Ok(value)
-    }
 }
 
 impl FinalizedState {
@@ -117,7 +55,7 @@ impl FinalizedState {
             hash_by_height: db.open_tree(b"hash_by_height").unwrap(),
             height_by_hash: db.open_tree(b"height_by_hash").unwrap(),
             block_by_height: db.open_tree(b"block_by_height").unwrap(),
-            // tx_by_hash: db.open_tree(b"tx_by_hash").unwrap(),
+            tx_by_hash: db.open_tree(b"tx_by_hash").unwrap(),
             utxo_by_outpoint: db.open_tree(b"utxo_by_outpoint").unwrap(),
             // sprout_nullifiers: db.open_tree(b"sprout_nullifiers").unwrap(),
             // sapling_nullifiers: db.open_tree(b"sapling_nullifiers").unwrap(),
@@ -169,33 +107,30 @@ impl FinalizedState {
         let height = block
             .coinbase_height()
             .expect("finalized blocks are valid and have a coinbase height");
-        let height_bytes = height.0.to_be_bytes();
         let hash = block.hash();
 
-        trace!(?height, "finalized block");
-
-        let block_bytes = block
-            .zcash_serialize_to_vec()
-            .expect("zcash_serialize_to_vec has wrong return type");
+        trace!(?height, "Finalized block");
 
         // TODO: check highest entry of hash_by_height as in RFC
 
-        self.hash_by_height.insert(&height_bytes, &hash.0)?;
-        self.height_by_hash.insert(&hash.0, &height_bytes)?;
-        self.block_by_height.insert(&height_bytes, block_bytes)?;
-        // tx_by_hash
+        self.hash_by_height.zs_insert(height, hash)?;
+        self.height_by_hash.zs_insert(hash, height)?;
+        self.block_by_height.zs_insert(height, &*block)?;
 
         for transaction in block.transactions.iter() {
             let transaction_hash = transaction.hash();
+            self.tx_by_hash.zs_insert(transaction_hash, transaction)?;
+
             for (index, output) in transaction.outputs().iter().enumerate() {
                 let outpoint = transparent::OutPoint {
                     hash: transaction_hash,
                     index: index as _,
                 };
 
-                self.utxo_by_outpoint.zs_insert(&outpoint, output)?;
+                self.utxo_by_outpoint.zs_insert(outpoint, output)?;
             }
         }
+
         // sprout_nullifiers
         // sapling_nullifiers
 
@@ -224,11 +159,11 @@ impl FinalizedState {
         let heights = crate::util::block_locator_heights(tip_height);
         let mut hashes = Vec::with_capacity(heights.len());
         for height in heights {
-            if let Some(bytes) = self.hash_by_height.get(&height.0.to_be_bytes())? {
-                let hash = block::Hash(bytes.as_ref().try_into().unwrap());
+            if let Some(hash) = self.hash_by_height.zs_get(&height)? {
                 hashes.push(hash)
             }
         }
+
         Ok(hashes)
     }
 
@@ -245,8 +180,8 @@ impl FinalizedState {
     }
 
     pub fn depth(&self, hash: block::Hash) -> Result<Option<u32>, BoxError> {
-        let height = match self.height_by_hash.get(&hash.0)? {
-            Some(bytes) => block::Height(u32::from_be_bytes(bytes.as_ref().try_into().unwrap())),
+        let height: block::Height = match self.height_by_hash.zs_get(&hash)? {
+            Some(height) => height,
             None => return Ok(None),
         };
 
@@ -258,16 +193,14 @@ impl FinalizedState {
     pub fn block(&self, hash_or_height: HashOrHeight) -> Result<Option<Arc<Block>>, BoxError> {
         let height = match hash_or_height {
             HashOrHeight::Height(height) => height,
-            HashOrHeight::Hash(hash) => match self.height_by_hash.get(&hash.0)? {
-                Some(bytes) => {
-                    block::Height(u32::from_be_bytes(bytes.as_ref().try_into().unwrap()))
-                }
+            HashOrHeight::Hash(hash) => match self.height_by_hash.zs_get(&hash)? {
+                Some(height) => height,
                 None => return Ok(None),
             },
         };
 
-        match self.block_by_height.get(&height.0.to_be_bytes())? {
-            Some(bytes) => Ok(Some(Arc::<Block>::zcash_deserialize(bytes.as_ref())?)),
+        match self.block_by_height.zs_get(&height)? {
+            Some(block) => Ok(Some(block)),
             None => Ok(None),
         }
     }
