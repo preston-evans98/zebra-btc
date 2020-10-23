@@ -759,24 +759,27 @@ where
 
 #[derive(Debug, Error)]
 pub enum VerifyCheckpointError {
-    #[error("checkpoint request after checkpointing finished")]
-    Finished,
-    #[error("block is higher than the maximum checkpoint")]
-    TooHigh,
-    #[error("block at {height:?} has already been verified")]
-    Duplicate { height: block::Height },
-    #[error("rejected older of duplicate verification requests")]
-    NewerRequest,
+    #[error("checkpoint request at {height:?} after checkpointing finished")]
+    Finished { height: block::Height },
+    #[error("block {height:?} is higher than the maximum checkpoint")]
+    AboveMaxCheckpoint { height: block::Height },
+    #[error("a block at {height:?} has already been verified")]
+    FinalizedHeight { height: block::Height },
+    #[error("rejected older of duplicate verification requests at {height:?} {hash:?}")]
+    OlderDuplicate {
+        height: block::Height,
+        hash: block::Hash,
+    } ,
     #[error("the block does not have a coinbase height")]
-    CoinbaseHeight,
+    NoCoinbaseHeight,
     #[error("checkpoint verifier was dropped")]
     Dropped,
     #[error(transparent)]
     CommitFinalized(BoxError),
     #[error(transparent)]
     CheckpointList(BoxError),
-    #[error("too many queued blocks at this height")]
-    QueuedLimit,
+    #[error("too many queued blocks at {height:?}")]
+    QueueFullForHeight { height: block::Height },
     #[error("the block hash does not match the chained checkpoint hash, expected {expected:?} found {found:?}")]
     UnexpectedHash {
         expected: block::Hash,
