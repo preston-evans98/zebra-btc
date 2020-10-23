@@ -1,6 +1,6 @@
 //! The primary implementation of the `zebra_state::Service` built upon sled
 
-use std::{collections::HashMap, convert::TryInto,  sync::Arc};
+use std::{collections::HashMap, convert::TryInto, sync::Arc};
 
 use tracing::trace;
 use zebra_chain::{
@@ -50,11 +50,7 @@ pub struct FinalizedState {
 /// value implement ZcashSerialize.
 trait SledSerialize {
     /// Serialize and insert the given key and value into a sled tree.
-    fn zs_insert<K, V>(
-        &self,
-        key: &K,
-        value: &V,
-    ) -> Result<(), sled::transaction::UnabortableTransactionError>
+    fn zs_insert<K, V>(&self, key: &K, value: &V) -> Result<(), BoxError>
     where
         K: ZcashSerialize,
         V: ZcashSerialize;
@@ -71,12 +67,8 @@ trait SledDeserialize {
         V: ZcashDeserialize;
 }
 
-impl SledSerialize for sled::transaction::TransactionalTree {
-    fn zs_insert<K, V>(
-        &self,
-        key: &K,
-        value: &V,
-    ) -> Result<(), sled::transaction::UnabortableTransactionError>
+impl SledSerialize for sled::Tree {
+    fn zs_insert<K, V>(&self, key: &K, value: &V) -> Result<(), BoxError>
     where
         K: ZcashSerialize,
         V: ZcashSerialize,
@@ -174,56 +166,40 @@ impl FinalizedState {
 
     /// Immediately commit `block` to the finalized state.
     pub fn commit_finalized_direct(&mut self, block: Arc<Block>) -> Result<block::Hash, BoxError> {
-        use sled::Transactional;
-
         let height = block
             .coinbase_height()
             .expect("finalized blocks are valid and have a coinbase height");
         let height_bytes = height.0.to_be_bytes();
         let hash = block.hash();
 
-        trace!(?height, "Finalized block");
+        trace!(?height, "finalized block");
 
-        (
-            &self.hash_by_height,
-            &self.height_by_hash,
-            &self.block_by_height,
-            &self.utxo_by_outpoint,
-        )
-            .transaction(
-                move |(hash_by_height, height_by_hash, block_by_height, utxo_by_outpoint)| {
-                    // TODO: do serialization above
-                    // for some reason this wouldn't move into the closure (??)
-                    let block_bytes = block
-                        .zcash_serialize_to_vec()
-                        .expect("zcash_serialize_to_vec has wrong return type");
+        let block_bytes = block
+            .zcash_serialize_to_vec()
+            .expect("zcash_serialize_to_vec has wrong return type");
 
-                    // TODO: check highest entry of hash_by_height as in RFC
+        // TODO: check highest entry of hash_by_height as in RFC
 
-                    hash_by_height.insert(&height_bytes, &hash.0)?;
-                    height_by_hash.insert(&hash.0, &height_bytes)?;
-                    block_by_height.insert(&height_bytes, block_bytes)?;
-                    // tx_by_hash
+        self.hash_by_height.insert(&height_bytes, &hash.0)?;
+        self.height_by_hash.insert(&hash.0, &height_bytes)?;
+        self.block_by_height.insert(&height_bytes, block_bytes)?;
+        // tx_by_hash
 
-                    for transaction in block.transactions.iter() {
-                        let transaction_hash = transaction.hash();
-                        for (index, output) in transaction.outputs().iter().enumerate() {
-                            let outpoint = transparent::OutPoint {
-                                hash: transaction_hash,
-                                index: index as _,
-                            };
+        for transaction in block.transactions.iter() {
+            let transaction_hash = transaction.hash();
+            for (index, output) in transaction.outputs().iter().enumerate() {
+                let outpoint = transparent::OutPoint {
+                    hash: transaction_hash,
+                    index: index as _,
+                };
 
-                            utxo_by_outpoint.zs_insert(&outpoint, output)?;
-                        }
-                    }
-                    // sprout_nullifiers
-                    // sapling_nullifiers
+                self.utxo_by_outpoint.zs_insert(&outpoint, output)?;
+            }
+        }
+        // sprout_nullifiers
+        // sapling_nullifiers
 
-                    // for some reason type inference fails here
-                    Ok::<_, sled::transaction::ConflictableTransactionError>(hash)
-                },
-            )
-            .map_err(Into::into)
+        Ok(hash)
     }
 
     /// Commit a finalized block to the state.
