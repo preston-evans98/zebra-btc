@@ -40,8 +40,8 @@ pub struct FinalizedState {
     block_by_height: sled::Tree,
     tx_by_hash: sled::Tree,
     utxo_by_outpoint: sled::Tree,
-    // sprout_nullifiers: sled::Tree,
-    // sapling_nullifiers: sled::Tree,
+    sprout_nullifiers: sled::Tree,
+    sapling_nullifiers: sled::Tree,
     // sprout_anchors: sled::Tree,
     // sapling_anchors: sled::Tree,
 }
@@ -57,8 +57,8 @@ impl FinalizedState {
             block_by_height: db.open_tree(b"block_by_height").unwrap(),
             tx_by_hash: db.open_tree(b"tx_by_hash").unwrap(),
             utxo_by_outpoint: db.open_tree(b"utxo_by_outpoint").unwrap(),
-            // sprout_nullifiers: db.open_tree(b"sprout_nullifiers").unwrap(),
-            // sapling_nullifiers: db.open_tree(b"sapling_nullifiers").unwrap(),
+            sprout_nullifiers: db.open_tree(b"sprout_nullifiers").unwrap(),
+            sapling_nullifiers: db.open_tree(b"sapling_nullifiers").unwrap(),
         }
     }
 
@@ -129,10 +129,15 @@ impl FinalizedState {
 
                 self.utxo_by_outpoint.zs_insert(outpoint, output)?;
             }
-        }
 
-        // sprout_nullifiers
-        // sapling_nullifiers
+            for sprout_nullifier in transaction.sprout_nullifiers() {
+                self.sprout_nullifiers.zs_insert(sprout_nullifier, ())?;
+            }
+
+            for sapling_nullifier in transaction.sapling_nullifiers() {
+                self.sapling_nullifiers.zs_insert(sapling_nullifier, ())?;
+            }
+        }
 
         Ok(hash)
     }
