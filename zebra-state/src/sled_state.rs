@@ -10,7 +10,7 @@ use zebra_chain::{
 };
 
 use crate::{BoxError, Config, HashOrHeight, QueuedBlock};
-use sled_format::{SledDeserialize, SledSerialize, FromSled};
+use sled_format::{FromSled, SledDeserialize, SledSerialize};
 
 mod sled_format;
 
@@ -174,7 +174,9 @@ impl FinalizedState {
     }
 
     pub fn tip(&self) -> Result<Option<(block::Height, block::Hash)>, BoxError> {
-        if let Some((height_bytes, hash_bytes)) = self.hash_by_height.iter().rev().next().transpose()? {
+        if let Some((height_bytes, hash_bytes)) =
+            self.hash_by_height.iter().rev().next().transpose()?
+        {
             let height = block::Height::from_ivec(height_bytes)?;
             let hash = block::Hash::from_ivec(hash_bytes)?;
 
