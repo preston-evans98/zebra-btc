@@ -73,9 +73,9 @@ jobs:
             scrape_interval: 500ms
             metrics_path: '/'
             static_configs:
-              - targets: ['localhost:9999']
+              - targets: ['0.0.0.0:9999']
         EOF
 
-        docker run --detach --network host --volume prometheus-storage:/prometheus --volume prometheus.yaml:/etc/prometheus/prometheus.yml prom/prometheus;
-        docker run --detach --network host --env GF_SERVER_HTTP_PORT=3030 --env GF_SERVER_HTTP_ADDR=0.0.0.0 --volume grafana-storage:/var/lib/grafana grafana/grafana;
+        docker run --detach --name prometheus --network host --volume prometheus-storage:/prometheus --volume /tmp/prometheus.yaml:/etc/prometheus/prometheus.yml prom/prometheus;
+        docker run --detach --name grafana --network host --env GF_SERVER_HTTP_PORT=3030 --env GF_SERVER_HTTP_ADDR=0.0.0.0 --volume grafana-storage:/var/lib/grafana grafana/grafana;
         "
