@@ -63,12 +63,19 @@ jobs:
         --service-account cos-vm@zealous-zebra.iam.gserviceaccount.com \
         --tags zebrad,grafana \
         --zone us-central1-a \
-        --metadata startup-script='
+        --metadata startup-script="
         docker volume create prometheus-storage;
         docker volume create grafana-storage;
 
-        echo "$(cat ./prometheus.yaml)" > prometheus.yaml;
+        cat <<EOF > prometheus.yaml
+        scrape_configs:
+          - job_name: 'zebrad'
+            scrape_interval: 500ms
+            metrics_path: '/'
+            static_configs:
+              - targets: ['localhost:9999']
+        EOF
 
         docker run --detach --network host --volume prometheus-storage:/prometheus --volume prometheus.yaml:/etc/prometheus/prometheus.yml prom/prometheus;
         docker run --detach --network host --env GF_SERVER_HTTP_PORT=3030 --env GF_SERVER_HTTP_ADDR=0.0.0.0 --volume grafana-storage:/var/lib/grafana grafana/grafana;
-        '
+        "
