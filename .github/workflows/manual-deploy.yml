@@ -67,7 +67,7 @@ jobs:
         docker volume create prometheus-storage;
         docker volume create grafana-storage;
 
-        cat <<EOF > prometheus.yaml
+        cat <<EOF > /tmp/prometheus.yaml
         scrape_configs:
           - job_name: 'zebrad'
             scrape_interval: 500ms
