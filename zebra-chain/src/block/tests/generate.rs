@@ -3,7 +3,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use std::sync::Arc;
 
 use crate::{
-    serialization::{ZcashDeserialize, ZcashSerialize},
+    serialization::{BitcoinDeserialize, BitcoinSerialize},
     transaction::{LockTime, Transaction},
     transparent,
 };
@@ -12,7 +12,7 @@ use super::super::{serialize::MAX_BLOCK_BYTES, Block, Header};
 
 /// Generate a block header
 pub fn block_header() -> Header {
-    Header::zcash_deserialize(&zebra_test::vectors::DUMMY_HEADER[..]).unwrap()
+    Header::bitcoin_deserialize(&zebra_test::vectors::DUMMY_HEADER[..]).unwrap()
 }
 
 /// Generate a block with multiple transactions just below limit
@@ -38,7 +38,7 @@ pub fn oversized_single_transaction_block() -> Block {
 // Implementation of block generation with multiple transactions
 fn multi_transaction_block(oversized: bool) -> Block {
     // A dummy transaction
-    let tx = Transaction::zcash_deserialize(&zebra_test::vectors::DUMMY_TX1[..]).unwrap();
+    let tx = Transaction::bitcoin_deserialize(&zebra_test::vectors::DUMMY_TX1[..]).unwrap();
 
     // A block header
     let header = block_header();
@@ -46,7 +46,7 @@ fn multi_transaction_block(oversized: bool) -> Block {
     // Serialize header
     let mut data_header = Vec::new();
     header
-        .zcash_serialize(&mut data_header)
+        .bitcoin_serialize(&mut data_header)
         .expect("Block header should serialize");
 
     // Calculate the number of transactions we need
@@ -72,9 +72,9 @@ fn multi_transaction_block(oversized: bool) -> Block {
 fn single_transaction_block(oversized: bool) -> Block {
     // Dummy input and output
     let input =
-        transparent::Input::zcash_deserialize(&zebra_test::vectors::DUMMY_INPUT1[..]).unwrap();
+        transparent::Input::bitcoin_deserialize(&zebra_test::vectors::DUMMY_INPUT1[..]).unwrap();
     let output =
-        transparent::Output::zcash_deserialize(&zebra_test::vectors::DUMMY_OUTPUT1[..]).unwrap();
+        transparent::Output::bitcoin_deserialize(&zebra_test::vectors::DUMMY_OUTPUT1[..]).unwrap();
 
     // A block header
     let header = block_header();
@@ -82,7 +82,7 @@ fn single_transaction_block(oversized: bool) -> Block {
     // Serialize header
     let mut data_header = Vec::new();
     header
-        .zcash_serialize(&mut data_header)
+        .bitcoin_serialize(&mut data_header)
         .expect("Block header should serialize");
 
     // Serialize a LockTime
@@ -92,7 +92,7 @@ fn single_transaction_block(oversized: bool) -> Block {
     ));
     let mut data_locktime = Vec::new();
     lock_time
-        .zcash_serialize(&mut data_locktime)
+        .bitcoin_serialize(&mut data_locktime)
         .expect("LockTime should serialize");
 
     // Calculate the number of inputs we need
@@ -117,11 +117,7 @@ fn single_transaction_block(oversized: bool) -> Block {
     outputs.push(output);
 
     // Create a big transaction
-    let big_transaction = Transaction::V1 {
-        inputs,
-        outputs,
-        lock_time,
-    };
+    let big_transaction = Transaction::new(1, inputs, outputs, lock_time);
 
     // Put the big transaction into a block
     let transactions = vec![Arc::new(big_transaction)];

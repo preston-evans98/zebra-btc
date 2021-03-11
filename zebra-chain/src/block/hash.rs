@@ -1,12 +1,10 @@
 use std::{fmt, io};
 
+use crate::serialization::{sha256d, BitcoinDeserialize, BitcoinSerialize, SerializationError};
+use bitcoin_serde_derive::BtcSerialize;
 #[cfg(any(test, feature = "proptest-impl"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-
-use crate::serialization::{
-    sha256d, ReadZcashExt, SerializationError, ZcashDeserialize, ZcashSerialize,
-};
 
 use super::Header;
 
@@ -18,9 +16,15 @@ use super::Header;
 ///
 /// Note: Zebra displays transaction and block hashes in big-endian byte-order,
 /// following the u256 convention set by Bitcoin and zcashd.
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize, BtcSerialize)]
 #[cfg_attr(any(test, feature = "proptest-impl"), derive(Arbitrary))]
 pub struct Hash(pub [u8; 32]);
+
+impl Hash {
+    pub fn from_bytes(bytes: [u8; 32]) -> Hash {
+        Hash(bytes)
+    }
+}
 
 impl fmt::Display for Hash {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -40,29 +44,24 @@ impl fmt::Debug for Hash {
     }
 }
 
+impl BitcoinDeserialize for Hash {
+    fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<Self, SerializationError>
+    where
+        Self: Sized,
+    {
+        Ok(Hash(<[u8; 32]>::bitcoin_deserialize(&mut reader)?))
+    }
+}
+
 impl<'a> From<&'a Header> for Hash {
     fn from(block_header: &'a Header) -> Self {
         let mut hash_writer = sha256d::Writer::default();
         block_header
-            .zcash_serialize(&mut hash_writer)
+            .bitcoin_serialize(&mut hash_writer)
             .expect("Sha256dWriter is infallible");
         Self(hash_writer.finish())
     }
 }
-
-impl ZcashSerialize for Hash {
-    fn zcash_serialize<W: io::Write>(&self, mut writer: W) -> Result<(), io::Error> {
-        writer.write_all(&self.0)?;
-        Ok(())
-    }
-}
-
-impl ZcashDeserialize for Hash {
-    fn zcash_deserialize<R: io::Read>(mut reader: R) -> Result<Self, SerializationError> {
-        Ok(Hash(reader.read_32_bytes()?))
-    }
-}
-
 impl std::str::FromStr for Hash {
     type Err = SerializationError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {

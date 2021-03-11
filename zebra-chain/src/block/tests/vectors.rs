@@ -3,8 +3,11 @@ use std::io::{Cursor, Write};
 
 use chrono::{DateTime, Duration, LocalResult, TimeZone, Utc};
 
-use crate::serialization::{sha256d, ZcashDeserialize, ZcashDeserializeInto, ZcashSerialize};
 use crate::transaction::LockTime;
+use crate::{
+    parameters::Network,
+    serialization::{sha256d, BitcoinDeserialize, BitcoinDeserializeInto, BitcoinSerialize},
+};
 
 use super::super::{serialize::MAX_BLOCK_BYTES, *};
 use super::generate; // XXX this should be rewritten as strategies
@@ -41,12 +44,12 @@ fn blockheaderhash_from_blockheader() {
     let mut bytes = Cursor::new(Vec::new());
 
     blockheader
-        .zcash_serialize(&mut bytes)
+        .bitcoin_serialize(&mut bytes)
         .expect("these bytes to serialize from a blockheader without issue");
 
     bytes.set_position(0);
     let other_header = bytes
-        .zcash_deserialize_into()
+        .bitcoin_deserialize_into()
         .expect("these bytes to deserialize into a blockheader without issue");
 
     assert_eq!(blockheader, other_header);
@@ -56,17 +59,11 @@ fn blockheaderhash_from_blockheader() {
 fn deserialize_blockheader() {
     zebra_test::init();
 
-    // Includes the 32-byte nonce and 3-byte equihash length field.
-    const BLOCK_HEADER_LENGTH: usize = crate::work::equihash::Solution::INPUT_LENGTH
-        + 32
-        + 3
-        + crate::work::equihash::SOLUTION_SIZE;
-
     for block in zebra_test::vectors::BLOCKS.iter() {
-        let header_bytes = &block[..BLOCK_HEADER_LENGTH];
+        let header_bytes = &block[..Header::len()];
 
         let _header = header_bytes
-            .zcash_deserialize_into::<Header>()
+            .bitcoin_deserialize_into::<Header>()
             .expect("blockheader test vector should deserialize");
     }
 }
@@ -77,16 +74,16 @@ fn deserialize_block() {
 
     // this one has a bad version field
     zebra_test::vectors::BLOCK_MAINNET_434873_BYTES
-        .zcash_deserialize_into::<Block>()
+        .bitcoin_deserialize_into::<Block>()
         .expect("block test vector should deserialize");
 
     for block_bytes in zebra_test::vectors::BLOCKS.iter() {
         let block = block_bytes
-            .zcash_deserialize_into::<Block>()
+            .bitcoin_deserialize_into::<Block>()
             .expect("block is structurally valid");
 
         let round_trip_bytes = block
-            .zcash_serialize_to_vec()
+            .bitcoin_serialize_to_vec()
             .expect("vec serialization is infallible");
 
         assert_eq!(&round_trip_bytes[..], *block_bytes);
@@ -98,7 +95,7 @@ fn coinbase_parsing_rejects_above_0x80() {
     zebra_test::init();
 
     zebra_test::vectors::BAD_BLOCK_MAINNET_202_BYTES
-        .zcash_deserialize_into::<Block>()
+        .bitcoin_deserialize_into::<Block>()
         .expect_err("parsing fails");
 }
 
@@ -110,7 +107,7 @@ fn block_test_vectors_unique() {
     let block_hashes: HashSet<_> = zebra_test::vectors::BLOCKS
         .iter()
         .map(|b| {
-            b.zcash_deserialize_into::<Block>()
+            b.bitcoin_deserialize_into::<Block>()
                 .expect("block is structurally valid")
                 .hash()
         })
@@ -146,7 +143,7 @@ fn block_test_vectors_height(network: Network) {
 
     for (&height, block) in block_iter {
         let block = block
-            .zcash_deserialize_into::<Block>()
+            .bitcoin_deserialize_into::<Block>()
             .expect("block is structurally valid");
         assert_eq!(
             block.coinbase_height().expect("block height is valid").0,
@@ -168,13 +165,13 @@ fn block_limits_multi_tx() {
     // Serialize the block
     let mut data = Vec::new();
     block
-        .zcash_serialize(&mut data)
+        .bitcoin_serialize(&mut data)
         .expect("block should serialize as we are not limiting generation yet");
 
     assert!(data.len() <= MAX_BLOCK_BYTES as usize);
 
     // Deserialize by now is ok as we are lower than the limit
-    let block2 = Block::zcash_deserialize(&data[..])
+    let block2 = Block::bitcoin_deserialize(&data[..])
         .expect("block should deserialize as we are just below limit");
     assert_eq!(block, block2);
 
@@ -184,13 +181,13 @@ fn block_limits_multi_tx() {
     // Serialize will still be fine
     let mut data = Vec::new();
     block
-        .zcash_serialize(&mut data)
+        .bitcoin_serialize(&mut data)
         .expect("block should serialize as we are not limiting generation yet");
 
     assert!(data.len() > MAX_BLOCK_BYTES as usize);
 
     // Deserialize will now fail
-    Block::zcash_deserialize(&data[..]).expect_err("block should not deserialize");
+    Block::bitcoin_deserialize(&data[..]).expect_err("block should not deserialize");
 }
 
 #[test]
@@ -205,13 +202,13 @@ fn block_limits_single_tx() {
     // Serialize the block
     let mut data = Vec::new();
     block
-        .zcash_serialize(&mut data)
+        .bitcoin_serialize(&mut data)
         .expect("block should serialize as we are not limiting generation yet");
 
     assert!(data.len() <= MAX_BLOCK_BYTES as usize);
 
     // Deserialize by now is ok as we are lower than the limit
-    Block::zcash_deserialize(&data[..])
+    Block::bitcoin_deserialize(&data[..])
         .expect("block should deserialize as we are just below limit");
 
     // Add 1 more input to the transaction, limit will be reached
@@ -219,13 +216,13 @@ fn block_limits_single_tx() {
 
     let mut data = Vec::new();
     block
-        .zcash_serialize(&mut data)
+        .bitcoin_serialize(&mut data)
         .expect("block should serialize as we are not limiting generation yet");
 
     assert!(data.len() > MAX_BLOCK_BYTES as usize);
 
     // Will fail as block overall size is above limit
-    Block::zcash_deserialize(&data[..]).expect_err("block should not deserialize");
+    Block::bitcoin_deserialize(&data[..]).expect_err("block should not deserialize");
 }
 
 /// Test wrapper for `BlockHeader.time_is_valid_at`.

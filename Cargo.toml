@@ -12,6 +12,7 @@ members = [
         "zebra-utils",
         "tower-batch",
         "tower-fallback",
+        "bitcoin_serde_derive",
 ]
 
 [profile.dev]

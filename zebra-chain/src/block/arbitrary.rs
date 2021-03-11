@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::parameters::Network;
-use crate::work::{difficulty::CompactDifficulty, equihash};
+use crate::cached::Cached;
+use crate::work::difficulty::CompactDifficulty;
 
 use super::*;
 
@@ -47,20 +47,6 @@ impl Block {
     }
 }
 
-impl Arbitrary for RootHash {
-    type Parameters = ();
-
-    fn arbitrary_with(_args: ()) -> Self::Strategy {
-        (any::<[u8; 32]>(), any::<Network>(), any::<Height>())
-            .prop_map(|(root_bytes, network, block_height)| {
-                RootHash::from_bytes(root_bytes, network, block_height)
-            })
-            .boxed()
-    }
-
-    type Strategy = BoxedStrategy<Self>;
-}
-
 impl Arbitrary for Header {
     type Parameters = ();
 
@@ -70,32 +56,28 @@ impl Arbitrary for Header {
             (4u32..(i32::MAX as u32)),
             any::<Hash>(),
             any::<merkle::Root>(),
-            any::<[u8; 32]>(),
             // time is interpreted as u32 in the spec, but rust timestamps are i64
             (0i64..(u32::MAX as i64)),
             any::<CompactDifficulty>(),
-            any::<[u8; 32]>(),
-            any::<equihash::Solution>(),
+            (0u32..(u32::MAX)),
         )
             .prop_map(
                 |(
                     version,
                     previous_block_hash,
                     merkle_root,
-                    root_bytes,
                     timestamp,
                     difficulty_threshold,
                     nonce,
-                    solution,
-                )| Header {
-                    version,
-                    previous_block_hash,
-                    merkle_root,
-                    root_bytes,
-                    time: Utc.timestamp(timestamp, 0),
-                    difficulty_threshold,
-                    nonce,
-                    solution,
+                )| {
+                    Header::new(
+                        version,
+                        previous_block_hash,
+                        merkle_root,
+                        Utc.timestamp(timestamp, 0),
+                        difficulty_threshold,
+                        nonce,
+                    )
                 },
             )
             .boxed()

@@ -13,12 +13,15 @@ use std::{
     ops::RangeInclusive,
 };
 
-use crate::serialization::{ZcashDeserialize, ZcashSerialize};
+use crate::{
+    serialization::{BitcoinDeserialize, BitcoinSerialize},
+    SerializationError,
+};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-/// A runtime validated type for representing amounts of zatoshis
+/// A runtime validated type for representing amounts of satoshis
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[serde(try_from = "i64")]
 #[serde(bound = "C: Constraint")]
@@ -351,22 +354,22 @@ pub trait Constraint {
     }
 }
 
-impl ZcashSerialize for Amount<NegativeAllowed> {
-    fn zcash_serialize<W: std::io::Write>(&self, mut writer: W) -> Result<(), std::io::Error> {
-        writer.write_i64::<LittleEndian>(self.0)
-    }
-}
+// impl BitcoinSerialize for Amount<NegativeAllowed> {
+//     fn bitcoin_serialize<W: std::io::Write>(&self, mut writer: W) -> Result<(), std::io::Error> {
+//         writer.write_i64::<LittleEndian>(self.0)
+//     }
+// }
 
-impl ZcashDeserialize for Amount<NegativeAllowed> {
-    fn zcash_deserialize<R: std::io::Read>(
-        mut reader: R,
-    ) -> Result<Self, crate::serialization::SerializationError> {
-        Ok(reader.read_i64::<LittleEndian>()?.try_into()?)
-    }
-}
+// impl BitcoinDeserialize for Amount<NegativeAllowed> {
+//     fn bitcoin_deserialize<R: std::io::Read>(
+//         mut reader: R,
+//     ) -> Result<Self, crate::serialization::SerializationError> {
+//         Ok(reader.read_i64::<LittleEndian>()?.try_into()?)
+//     }
+// }
 
-impl ZcashSerialize for Amount<NonNegative> {
-    fn zcash_serialize<W: std::io::Write>(&self, mut writer: W) -> Result<(), std::io::Error> {
+impl BitcoinSerialize for Amount<NonNegative> {
+    fn bitcoin_serialize<W: std::io::Write>(&self, mut writer: W) -> Result<(), std::io::Error> {
         let amount = self
             .0
             .try_into()
@@ -376,11 +379,14 @@ impl ZcashSerialize for Amount<NonNegative> {
     }
 }
 
-impl ZcashDeserialize for Amount<NonNegative> {
-    fn zcash_deserialize<R: std::io::Read>(
-        mut reader: R,
-    ) -> Result<Self, crate::serialization::SerializationError> {
-        Ok(reader.read_u64::<LittleEndian>()?.try_into()?)
+impl BitcoinDeserialize for Amount<NonNegative> {
+    fn bitcoin_deserialize<R: std::io::Read>(mut reader: R) -> Result<Self, SerializationError> {
+        match reader.read_u64::<LittleEndian>()?.try_into() {
+            Ok(val) => Ok(val),
+            Err(e) => Err(SerializationError::Parse(
+                "Could not parse val as non-negative amount",
+            )),
+        }
     }
 }
 

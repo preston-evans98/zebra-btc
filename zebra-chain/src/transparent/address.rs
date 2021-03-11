@@ -11,26 +11,26 @@ use proptest::{arbitrary::Arbitrary, collection::vec, prelude::*};
 
 use crate::{
     parameters::Network,
-    serialization::{SerializationError, ZcashDeserialize, ZcashSerialize},
+    serialization::{BitcoinDeserialize, BitcoinSerialize, SerializationError},
 };
 
 use super::Script;
 
-/// Magic numbers used to identify what networks Transparent Addresses
+/// Magic numbers used to identify what networks the Addresses
 /// are associated with.
 mod magics {
     pub mod p2sh {
-        pub const MAINNET: [u8; 2] = [0x1C, 0xBD];
-        pub const TESTNET: [u8; 2] = [0x1C, 0xBA];
+        pub const MAINNET: [u8; 1] = [0x05];
+        pub const TESTNET: [u8; 1] = [0xc4];
     }
 
     pub mod p2pkh {
-        pub const MAINNET: [u8; 2] = [0x1C, 0xB8];
-        pub const TESTNET: [u8; 2] = [0x1D, 0x25];
+        pub const MAINNET: [u8; 1] = [0x00];
+        pub const TESTNET: [u8; 1] = [0x6f];
     }
 }
 
-/// Transparent Zcash Addresses
+/// Bitcoin Addresses
 ///
 /// In Bitcoin a single byte is used for the version field identifying
 /// the address type. In Zcash two bytes are used. For addresses on
@@ -86,7 +86,7 @@ impl fmt::Debug for Address {
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut bytes = io::Cursor::new(Vec::new());
-        let _ = self.zcash_serialize(&mut bytes);
+        let _ = self.bitcoin_serialize(&mut bytes);
 
         f.write_str(&bs58::encode(bytes.get_ref()).with_check().into_string())
     }
@@ -99,14 +99,14 @@ impl std::str::FromStr for Address {
         let result = &bs58::decode(s).with_check(None).into_vec();
 
         match result {
-            Ok(bytes) => Self::zcash_deserialize(&bytes[..]),
+            Ok(bytes) => Self::bitcoin_deserialize(&bytes[..]),
             Err(_) => Err(SerializationError::Parse("t-addr decoding error")),
         }
     }
 }
 
-impl ZcashSerialize for Address {
-    fn zcash_serialize<W: io::Write>(&self, mut writer: W) -> Result<(), io::Error> {
+impl BitcoinSerialize for Address {
+    fn bitcoin_serialize<W: io::Write>(&self, mut writer: W) -> Result<(), io::Error> {
         match self {
             Address::PayToScriptHash {
                 network,
@@ -138,9 +138,9 @@ impl ZcashSerialize for Address {
     }
 }
 
-impl ZcashDeserialize for Address {
-    fn zcash_deserialize<R: io::Read>(mut reader: R) -> Result<Self, SerializationError> {
-        let mut version_bytes = [0; 2];
+impl BitcoinDeserialize for Address {
+    fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<Self, SerializationError> {
+        let mut version_bytes = [0; 1];
         reader.read_exact(&mut version_bytes)?;
 
         let mut hash_bytes = [0; 20];
@@ -163,7 +163,7 @@ impl ZcashDeserialize for Address {
                 network: Network::Testnet,
                 pub_key_hash: hash_bytes,
             }),
-            _ => Err(SerializationError::Parse("bad t-addr version/type")),
+            _ => Err(SerializationError::Parse("bad addr version/type")),
         }
     }
 }
@@ -338,9 +338,9 @@ proptest! {
 
         let mut data = Vec::new();
 
-        taddr.zcash_serialize(&mut data).expect("t-addr should serialize");
+        taddr.bitcoin_serialize(&mut data).expect("t-addr should serialize");
 
-        let taddr2 = Address::zcash_deserialize(&data[..]).expect("randomized t-addr should deserialize");
+        let taddr2 = Address::bitcoin_deserialize(&data[..]).expect("randomized t-addr should deserialize");
 
         prop_assert_eq![taddr, taddr2];
     }

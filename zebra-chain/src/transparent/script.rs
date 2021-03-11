@@ -1,6 +1,7 @@
 #![allow(clippy::unit_arg)]
-use crate::serialization::{
-    ReadZcashExt, SerializationError, WriteZcashExt, ZcashDeserialize, ZcashSerialize,
+use crate::{
+    compactint::CompactInt,
+    serialization::{BitcoinDeserialize, BitcoinSerialize, SerializationError},
 };
 use std::{
     fmt,
@@ -15,6 +16,12 @@ use std::{
 )]
 pub struct Script(pub Vec<u8>);
 
+impl Script {
+    pub fn serialized_size(&self) -> usize {
+        CompactInt::size(self.0.len()) + self.0.len()
+    }
+}
+
 impl fmt::Debug for Script {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_tuple("Script")
@@ -23,18 +30,18 @@ impl fmt::Debug for Script {
     }
 }
 
-impl ZcashSerialize for Script {
-    fn zcash_serialize<W: io::Write>(&self, mut writer: W) -> Result<(), io::Error> {
-        writer.write_compactsize(self.0.len() as u64)?;
+impl BitcoinSerialize for Script {
+    fn bitcoin_serialize<W: io::Write>(&self, mut writer: W) -> Result<(), io::Error> {
+        CompactInt::from(self.0.len()).bitcoin_serialize(&mut writer)?;
         writer.write_all(&self.0[..])?;
         Ok(())
     }
 }
 
-impl ZcashDeserialize for Script {
-    fn zcash_deserialize<R: io::Read>(mut reader: R) -> Result<Self, SerializationError> {
+impl BitcoinDeserialize for Script {
+    fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<Self, SerializationError> {
         // XXX what is the max length of a script?
-        let len = reader.read_compactsize()?;
+        let len = CompactInt::bitcoin_deserialize(&mut reader)?.value();
         let mut bytes = Vec::new();
         reader.take(len).read_to_end(&mut bytes)?;
         Ok(Script(bytes))
@@ -48,7 +55,7 @@ mod proptests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::serialization::{ZcashDeserialize, ZcashSerialize};
+    use crate::serialization::{BitcoinDeserialize, BitcoinSerialize};
 
     proptest! {
         #[test]
@@ -56,10 +63,10 @@ mod proptests {
             zebra_test::init();
 
             let mut bytes = Cursor::new(Vec::new());
-            script.zcash_serialize(&mut bytes)?;
+            script.bitcoin_serialize(&mut bytes)?;
 
             bytes.set_position(0);
-            let other_script = Script::zcash_deserialize(&mut bytes)?;
+            let other_script = Script::bitcoin_deserialize(&mut bytes)?;
 
             prop_assert_eq![script, other_script];
         }

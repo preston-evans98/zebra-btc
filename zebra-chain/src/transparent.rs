@@ -9,6 +9,12 @@ mod serialize;
 pub use address::Address;
 pub use script::Script;
 
+use crate::{
+    cached::Cached, compactint::CompactInt, BitcoinDeserialize, BitcoinSerialize,
+    SerializationError,
+};
+use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
+
 #[cfg(any(test, feature = "proptest-impl"))]
 use proptest_derive::Arbitrary;
 
@@ -23,12 +29,12 @@ use crate::{
 };
 
 /// Arbitrary data inserted by miners into a coinbase transaction.
-#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize, BtcDeserialize, BtcSerialize)]
 pub struct CoinbaseData(
-    /// Invariant: this vec, together with the coinbase height, must be less than
-    /// 100 bytes. We enforce this by only constructing CoinbaseData fields by
+    /// Invariant: this vec must be less than 100 bytes.
+    /// We enforce this by only constructing CoinbaseData fields by
     /// parsing blocks with 100-byte data fields. When we implement block
-    /// creation, we should provide a constructor for the coinbase data field
+    /// creation, we should provide a constructor for the (non-blockheight) coinbase data field
     /// that restricts it to 95 = 100 -1 -4 bytes (safe for any block height up
     /// to 500_000_000).
     pub(super) Vec<u8>,
@@ -37,6 +43,12 @@ pub struct CoinbaseData(
 impl AsRef<[u8]> for CoinbaseData {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
+    }
+}
+
+impl CoinbaseData {
+    pub fn serialized_size(&self) -> usize {
+        CompactInt::size(self.0.len()) + self.0.len()
     }
 }
 
@@ -57,7 +69,7 @@ impl std::fmt::Debug for CoinbaseData {
 /// OutPoint
 ///
 /// A particular transaction output reference.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash, BtcSerialize)]
 #[cfg_attr(any(test, feature = "proptest-impl"), derive(Arbitrary))]
 pub struct OutPoint {
     /// References the transaction that contains the UTXO being spent.
@@ -68,6 +80,12 @@ pub struct OutPoint {
     pub index: u32,
 }
 
+impl OutPoint {
+    #[inline]
+    pub const fn len() -> usize {
+        36
+    }
+}
 /// A transparent input to a transaction.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Input {
@@ -82,13 +100,33 @@ pub enum Input {
     },
     /// New coins created by the block reward.
     Coinbase {
-        /// The height of this block.
-        height: block::Height,
-        /// Free data inserted by miners after the block height.
+        /// The height of this block, which can be computed from the coinbase data after BIP 34 activation.
+        /// The `Cached<block::height>` is wrapped in an explicit option to make it clear that not all blocks have a height encoded
+        height: Option<Cached<block::Height>>,
+        /// Free data inserted by miners.  
+        /// Includes the block height post BIP 34
+        //// Note that Block number 227,835 (timestamp 2013-03-24 15:49:13 GMT) was the last version 1 block.
         data: CoinbaseData,
         /// The sequence number for the output.
         sequence: u32,
     },
+}
+
+impl Input {
+    pub fn len(&self) -> usize {
+        match *self {
+            Input::PrevOut {
+                outpoint,
+                ref unlock_script,
+                sequence,
+            } => OutPoint::len() + unlock_script.serialized_size() + 4,
+            Input::Coinbase {
+                height,
+                ref data,
+                sequence,
+            } => data.serialized_size() + 4,
+        }
+    }
 }
 
 /// A transparent output from a transaction.
@@ -103,7 +141,9 @@ pub enum Input {
 /// I only own one UTXO worth 2 ZEC, I would construct a transaction
 /// that spends my UTXO and sends 1 ZEC to you and 1 ZEC back to me
 /// (just like receiving change).
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[derive(
+    Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash, BtcDeserialize, BtcSerialize,
+)]
 #[cfg_attr(any(test, feature = "proptest-impl"), derive(Arbitrary))]
 pub struct Output {
     /// Transaction value.
@@ -112,4 +152,11 @@ pub struct Output {
 
     /// The lock script defines the conditions under which this output can be spent.
     pub lock_script: Script,
+}
+
+impl Output {
+    /// Returns the serialized length (in bytes) of this Output
+    pub fn len(&self) -> usize {
+        8 + self.lock_script.serialized_size()
+    }
 }

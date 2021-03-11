@@ -1,9 +1,7 @@
 //! Definitions of network messages.
 
 use std::error::Error;
-use std::{fmt, net, sync::Arc};
-
-use chrono::{DateTime, Utc};
+use std::{fmt, sync::Arc};
 
 use zebra_chain::{
     block::{self, Block},
@@ -13,6 +11,14 @@ use zebra_chain::{
 use super::inv::InventoryHash;
 use super::types::*;
 use crate::meta_addr::MetaAddr;
+
+mod version;
+pub use version::Version;
+
+pub trait Payload {
+    fn serialized_size(&self) -> usize;
+    fn to_bytes(&self) -> Result<Vec<u8>, std::io::Error>;
+}
 
 /// A Bitcoin-like network message for the Zcash protocol.
 ///
@@ -39,41 +45,7 @@ pub enum Message {
     /// is distinct from a simple version number.
     ///
     /// [Bitcoin reference](https://en.bitcoin.it/wiki/Protocol_documentation#version)
-    Version {
-        /// The network version number supported by the sender.
-        version: Version,
-
-        /// The network services advertised by the sender.
-        services: PeerServices,
-
-        /// The time when the version message was sent.
-        timestamp: DateTime<Utc>,
-
-        /// The network address of the node receiving this message, and its
-        /// advertised network services.
-        ///
-        /// Q: how does the handshake know the remote peer's services already?
-        address_recv: (PeerServices, net::SocketAddr),
-
-        /// The network address of the node sending this message, and its
-        /// advertised network services.
-        address_from: (PeerServices, net::SocketAddr),
-
-        /// Node random nonce, randomly generated every time a version
-        /// packet is sent. This nonce is used to detect connections
-        /// to self.
-        nonce: Nonce,
-
-        /// The Zcash user agent advertised by the sender.
-        user_agent: String,
-
-        /// The last block received by the emitting node.
-        start_height: block::Height,
-
-        /// Whether the remote peer should announce relayed
-        /// transactions or not, see [BIP 0037](https://github.com/bitcoin/bips/blob/master/bip-0037.mediawiki)
-        relay: bool,
-    },
+    Version(Version),
 
     /// A `verack` message.
     ///
@@ -346,3 +318,36 @@ impl fmt::Display for Message {
         })
     }
 }
+
+// impl Message {
+//     pub fn command(&self) -> Command {
+//         match self {
+//             Message::Addr { .. } => Command::Addr,
+//             Message::BlockTxn { .. } => Command::BlockTxn,
+//             Message::Block { .. } => Command::Block,
+//             Message::CompactBlock { .. } => Command::CmpctBlock,
+//             Message::FeeFilter { .. } => Command::FeeFilter,
+//             Message::FilterAdd { .. } => Command::FilterAdd,
+//             Message::FilterClear {} => Command::FilterClear,
+//             Message::FilterLoad { .. } => Command::FilterLoad,
+//             Message::GetAddr {} => Command::GetAddr,
+//             Message::GetBlockTxn { .. } => Command::GetBlockTxn,
+//             Message::GetBlocks { .. } => Command::GetBlocks,
+//             Message::GetData { .. } => Command::GetData,
+//             Message::GetHeaders { .. } => Command::GetHeaders,
+//             Message::Headers { .. } => Command::Headers,
+//             Message::Inv { .. } => Command::Inv,
+//             Message::MemPool {} => Command::MemPool,
+//             Message::MerkleBlock { .. } => Command::MerkleBlock,
+//             Message::NotFound { .. } => Command::MemPool,
+//             Message::Ping { .. } => Command::Ping,
+//             Message::Pong { .. } => Command::Pong,
+//             Message::Reject { .. } => Command::Reject,
+//             Message::SendCompact { .. } => Command::SendCmpct,
+//             Message::SendHeaders {} => Command::SendHeaders,
+//             Message::Tx { .. } => Command::Tx,
+//             Message::Verack {} => Command::Verack,
+//             Message::Version { .. } => Command::Version,
+//         }
+//     }
+// }

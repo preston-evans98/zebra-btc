@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use chrono::{DateTime, TimeZone, Utc};
 
 use crate::block;
-use crate::serialization::{SerializationError, ZcashDeserialize, ZcashSerialize};
+use crate::serialization::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
 
 /// A Bitcoin-style `locktime`, representing either a block height or an epoch
 /// time.
@@ -58,8 +58,8 @@ impl LockTime {
     }
 }
 
-impl ZcashSerialize for LockTime {
-    fn zcash_serialize<W: io::Write>(&self, mut writer: W) -> Result<(), io::Error> {
+impl BitcoinSerialize for LockTime {
+    fn bitcoin_serialize<W: io::Write>(&self, mut writer: W) -> Result<(), io::Error> {
         // This implementation does not check the invariants on `LockTime` so that the
         // serialization is fallible only if the underlying writer is. This ensures that
         // we can always compute a hash of a transaction object.
@@ -71,8 +71,8 @@ impl ZcashSerialize for LockTime {
     }
 }
 
-impl ZcashDeserialize for LockTime {
-    fn zcash_deserialize<R: io::Read>(mut reader: R) -> Result<Self, SerializationError> {
+impl BitcoinDeserialize for LockTime {
+    fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<Self, SerializationError> {
         let n = reader.read_u32::<LittleEndian>()?;
         if n <= block::Height::MAX.0 {
             Ok(LockTime::Height(block::Height(n)))

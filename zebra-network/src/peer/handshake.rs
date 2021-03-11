@@ -23,7 +23,7 @@ use zebra_chain::block;
 use crate::{
     constants,
     protocol::{
-        external::{types::*, Codec, InventoryHash, Message},
+        external::{types::*, Codec, InventoryHash, Message, Version},
         internal::{Request, Response},
     },
     types::MetaAddr,
@@ -244,20 +244,17 @@ where
             // truncate the timestamp to the nearest 5 minutes.
             let now = Utc::now().timestamp();
             let timestamp = Utc.timestamp(now - now.rem_euclid(5 * 60), 0);
-
-            let version = Message::Version {
-                version: constants::CURRENT_VERSION,
-                services: our_services,
-                timestamp,
-                address_recv: (PeerServices::NODE_NETWORK, addr),
-                address_from: (our_services, our_addr),
-                nonce: local_nonce,
+            let version = Message::Version(Version::new(
+                constants::CURRENT_VERSION,
+                addr,
+                PeerServices::NODE_NETWORK,
+                our_services,
+                our_addr,
+                local_nonce,
                 user_agent,
-                // The protocol works fine if we don't reveal our current block height,
-                // and not sending it means we don't need to be connected to the chain state.
-                start_height: block::Height(0),
+                block::Height(0),
                 relay,
-            };
+            ));
 
             debug!(?version, "sending initial version message");
             stream.send(version).await?;
@@ -269,17 +266,16 @@ where
 
             // Check that we got a Version and destructure its fields into the local scope.
             debug!(?remote_msg, "got message from remote peer");
-            let (remote_nonce, remote_services, remote_version) = if let Message::Version {
-                nonce,
-                services,
-                version,
-                ..
-            } = remote_msg
-            {
-                (nonce, services, version)
-            } else {
-                return Err(HandshakeError::UnexpectedMessage(Box::new(remote_msg)));
-            };
+            let (remote_nonce, remote_services, remote_version) =
+                if let Message::Version(remote_contents) = remote_msg {
+                    (
+                        remote_contents.nonce,
+                        remote_contents.services,
+                        remote_contents.version,
+                    )
+                } else {
+                    return Err(HandshakeError::UnexpectedMessage(Box::new(remote_msg)));
+                };
 
             // Check for nonce reuse, indicating self-connection.
             let nonce_reuse = {
@@ -327,7 +323,9 @@ where
             //       configured network, and height is the best tip's block
             //       height.
 
-            if remote_version < Version::min_for_upgrade(network, constants::MIN_NETWORK_UPGRADE) {
+            if remote_version
+                < ProtocolVersion::min_for_upgrade(network, constants::MIN_NETWORK_UPGRADE)
+            {
                 // Disconnect if peer is using an obsolete version.
                 return Err(HandshakeError::ObsoleteVersion(remote_version));
             }

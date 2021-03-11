@@ -5,7 +5,8 @@ use std::fmt;
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 
-use crate::serialization::{sha256d, SerializationError, ZcashSerialize};
+use crate::serialization::{sha256d, BitcoinDeserialize, BitcoinSerialize, SerializationError};
+use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
 
 use super::Transaction;
 
@@ -13,7 +14,7 @@ use super::Transaction;
 ///
 /// Note: Zebra displays transaction and block hashes in big-endian byte-order,
 /// following the u256 convention set by Bitcoin and zcashd.
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash, BtcSerialize, BtcDeserialize)]
 #[cfg_attr(any(test, feature = "proptest-impl"), derive(Arbitrary))]
 pub struct Hash(pub [u8; 32]);
 
@@ -21,7 +22,7 @@ impl<'a> From<&'a Transaction> for Hash {
     fn from(transaction: &'a Transaction) -> Self {
         let mut hash_writer = sha256d::Writer::default();
         transaction
-            .zcash_serialize(&mut hash_writer)
+            .bitcoin_serialize(&mut hash_writer)
             .expect("Transactions must serialize into the hash.");
         Self(hash_writer.finish())
     }

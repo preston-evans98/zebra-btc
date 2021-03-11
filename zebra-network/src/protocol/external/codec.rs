@@ -1,7 +1,7 @@
 //! A Tokio codec mapping byte streams to Bitcoin message streams.
 
-use std::fmt;
 use std::io::{Cursor, Read, Write};
+use std::{fmt, net::SocketAddr};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use bytes::BytesMut;
@@ -11,17 +11,14 @@ use tokio_util::codec::{Decoder, Encoder};
 use zebra_chain::{
     block::{self, Block},
     parameters::Network,
-    serialization::{
-        sha256d, ReadZcashExt, SerializationError as Error, WriteZcashExt, ZcashDeserialize,
-        ZcashSerialize,
-    },
+    serialization::{sha256d, BitcoinDeserialize, BitcoinSerialize, SerializationError as Error},
     transaction::Transaction,
 };
 
 use crate::constants;
 
 use super::{
-    message::{Message, RejectReason},
+    message::{Message, RejectReason, Version},
     types::*,
 };
 
@@ -42,7 +39,7 @@ pub struct Builder {
     /// The network magic to use in encoding.
     network: Network,
     /// The protocol version to speak when encoding/decoding.
-    version: Version,
+    version: ProtocolVersion,
     /// The maximum allowable message length.
     max_len: usize,
     /// An optional label to use for reporting metrics.
@@ -61,7 +58,7 @@ impl Codec {
     }
 
     /// Reconfigure the version used by the codec, e.g., after completing a handshake.
-    pub fn reconfigure_version(&mut self, version: Version) {
+    pub fn reconfigure_version(&mut self, version: ProtocolVersion) {
         self.builder.version = version;
     }
 }
@@ -83,7 +80,7 @@ impl Builder {
 
     /// Configure the codec for the given [`Version`].
     #[allow(dead_code)]
-    pub fn for_version(mut self, version: Version) -> Self {
+    pub fn for_version(mut self, version: ProtocolVersion) -> Self {
         self.version = version;
         self
     }
@@ -177,33 +174,24 @@ impl Codec {
     /// contain a checksum of the message body.
     fn write_body<W: Write>(&self, msg: &Message, mut writer: W) -> Result<(), Error> {
         match msg {
-            Message::Version {
-                version,
-                services,
-                timestamp,
-                address_recv,
-                address_from,
-                nonce,
-                user_agent,
-                start_height,
-                relay,
-            } => {
-                writer.write_u32::<LittleEndian>(version.0)?;
-                writer.write_u64::<LittleEndian>(services.bits())?;
-                writer.write_i64::<LittleEndian>(timestamp.timestamp())?;
+            Message::Version(inner) => {
+                inner.bitcoin_serialize(&mut writer)?;
+                // writer.write_u32::<LittleEndian>(version.0)?;
+                // writer.write_u64::<LittleEndian>(services.bits())?;
+                // writer.write_i64::<LittleEndian>(timestamp.timestamp())?;
 
-                let (recv_services, recv_addr) = address_recv;
-                writer.write_u64::<LittleEndian>(recv_services.bits())?;
-                writer.write_socket_addr(*recv_addr)?;
+                // let (recv_services, recv_addr) = address_recv;
+                // writer.write_u64::<LittleEndian>(recv_services.bits())?;
+                // writer.write_socket_addr(*recv_addr)?;
 
-                let (from_services, from_addr) = address_from;
-                writer.write_u64::<LittleEndian>(from_services.bits())?;
-                writer.write_socket_addr(*from_addr)?;
+                // let (from_services, from_addr) = address_from;
+                // writer.write_u64::<LittleEndian>(from_services.bits())?;
+                // writer.write_socket_addr(*from_addr)?;
 
-                writer.write_u64::<LittleEndian>(nonce.0)?;
-                writer.write_string(&user_agent)?;
-                writer.write_u32::<LittleEndian>(start_height.0)?;
-                writer.write_u8(*relay as u8)?;
+                // writer.write_u64::<LittleEndian>(nonce.0)?;
+                // writer.write_string(&user_agent)?;
+                // writer.write_u32::<LittleEndian>(start_height.0)?;
+                // writer.write_u8(*relay as u8)?;
             }
             Message::Verack => { /* Empty payload -- no-op */ }
             Message::Ping(nonce) => {
@@ -413,28 +401,27 @@ impl Decoder for Codec {
 
 impl Codec {
     fn read_version<R: Read>(&self, mut reader: R) -> Result<Message, Error> {
-        Ok(Message::Version {
-            version: Version(reader.read_u32::<LittleEndian>()?),
-            // Use from_bits_truncate to discard unknown service bits.
-            services: PeerServices::from_bits_truncate(reader.read_u64::<LittleEndian>()?),
-            timestamp: Utc.timestamp(reader.read_i64::<LittleEndian>()?, 0),
-            address_recv: (
-                PeerServices::from_bits_truncate(reader.read_u64::<LittleEndian>()?),
-                reader.read_socket_addr()?,
-            ),
-            address_from: (
-                PeerServices::from_bits_truncate(reader.read_u64::<LittleEndian>()?),
-                reader.read_socket_addr()?,
-            ),
-            nonce: Nonce(reader.read_u64::<LittleEndian>()?),
-            user_agent: reader.read_string()?,
-            start_height: block::Height(reader.read_u32::<LittleEndian>()?),
-            relay: match reader.read_u8()? {
-                0 => false,
-                1 => true,
-                _ => return Err(Error::Parse("non-bool value supplied in relay field")),
-            },
-        })
+        Ok(Message::Version(Version::bitcoin_deserialize(&mut reader)?))
+        // version: ProtocolVersion(reader.read_u32::<LittleEndian>()?),
+        // // Use from_bits_truncate to discard unknown service bits.
+        // services: PeerServices::from_bits_truncate(reader.read_u64::<LittleEndian>()?),
+        // timestamp: Utc.timestamp(reader.read_i64::<LittleEndian>()?, 0),
+        // address_recv: (
+        //     PeerServices::from_bits_truncate(reader.read_u64::<LittleEndian>()?),
+        //     reader.read_socket_addr()?,
+        // ),
+        // address_from: (
+        //     PeerServices::from_bits_truncate(reader.read_u64::<LittleEndian>()?),
+        //     reader.read_socket_addr()?,
+        // ),
+        // nonce: Nonce(reader.read_u64::<LittleEndian>()?),
+        // user_agent: reader.read_string()?,
+        // start_height: block::Height(reader.read_u32::<LittleEndian>()?),
+        // relay: match reader.read_u8()? {
+        //     0 => false,
+        //     1 => true,
+        //     _ => return Err(Error::Parse("non-bool value supplied in relay field")),
+        // },
     }
 
     fn read_verack<R: Read>(&self, mut _reader: R) -> Result<Message, Error> {
@@ -489,7 +476,7 @@ impl Codec {
     }
 
     fn read_getblocks<R: Read>(&self, mut reader: R) -> Result<Message, Error> {
-        if self.builder.version == Version(reader.read_u32::<LittleEndian>()?) {
+        if self.builder.version == ProtocolVersion(reader.read_u32::<LittleEndian>()?) {
             let known_blocks = Vec::zcash_deserialize(&mut reader)?;
             let stop_hash = block::Hash::zcash_deserialize(&mut reader)?;
             let stop = if stop_hash != block::Hash([0; 32]) {
@@ -513,7 +500,7 @@ impl Codec {
     }
 
     fn read_getheaders<R: Read>(&self, mut reader: R) -> Result<Message, Error> {
-        if self.builder.version == Version(reader.read_u32::<LittleEndian>()?) {
+        if self.builder.version == ProtocolVersion(reader.read_u32::<LittleEndian>()?) {
             let known_blocks = Vec::zcash_deserialize(&mut reader)?;
             let stop_hash = block::Hash::zcash_deserialize(&mut reader)?;
             let stop = if stop_hash != block::Hash([0; 32]) {
@@ -600,23 +587,17 @@ mod tests {
 
         let rt = Runtime::new().unwrap();
 
-        let v = Message::Version {
-            version: crate::constants::CURRENT_VERSION,
+        let v = Message::Version(Version::new(
+            crate::constants::CURRENT_VERSION,
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 6)), 8233),
             services,
-            timestamp,
-            address_recv: (
-                services,
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 6)), 8233),
-            ),
-            address_from: (
-                services,
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 6)), 8233),
-            ),
-            nonce: Nonce(0x9082_4908_8927_9238),
-            user_agent: "Zebra".to_owned(),
-            start_height: block::Height(540_000),
-            relay: true,
-        };
+            services,
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 6)), 8233),
+            Nonce(0x9082_4908_8927_9238),
+            "Beaver".to_owned(),
+            block::Height(540_000),
+            true,
+        ));
 
         use tokio_util::codec::{FramedRead, FramedWrite};
         let v_bytes = rt.block_on(async {
@@ -714,14 +695,14 @@ mod tests {
     #[test]
     fn max_msg_size_round_trip() {
         use std::sync::Arc;
-        use zebra_chain::serialization::ZcashDeserializeInto;
+        use zebra_chain::serialization::BitcoinDeserializeInto;
         zebra_test::init();
 
         let rt = Runtime::new().unwrap();
 
         // make tests with a Tx message
         let tx = zebra_test::vectors::DUMMY_TX1
-            .zcash_deserialize_into()
+            .bitcoin_deserialize_into()
             .unwrap();
         let msg = Message::Tx(Arc::new(tx));
 

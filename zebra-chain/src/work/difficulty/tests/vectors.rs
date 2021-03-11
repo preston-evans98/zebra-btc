@@ -1,7 +1,7 @@
 use color_eyre::eyre::eyre;
 use color_eyre::eyre::Report;
 
-use crate::serialization::ZcashDeserialize;
+use crate::serialization::BitcoinDeserialize;
 use crate::{block::Block, parameters::NetworkUpgrade};
 
 use super::super::*;
@@ -290,7 +290,7 @@ fn block_difficulty_for_network(network: Network) -> Result<(), Report> {
 
     for (&height, block) in block_iter {
         let block =
-            Block::zcash_deserialize(&block[..]).expect("block test vector should deserialize");
+            Block::bitcoin_deserialize(&block[..]).expect("block test vector should deserialize");
         let hash = block.hash();
 
         /// SPANDOC: Calculate the threshold for block {?height, ?network}
@@ -368,7 +368,8 @@ fn genesis_block_difficulty_for_network(network: Network) -> Result<(), Report> 
     };
 
     let block = block.expect("test vectors contain the genesis block");
-    let block = Block::zcash_deserialize(&block[..]).expect("block test vector should deserialize");
+    let block =
+        Block::bitcoin_deserialize(&block[..]).expect("block test vector should deserialize");
     let hash = block.hash();
 
     /// SPANDOC: Calculate the threshold for the genesis block {?network}
@@ -429,7 +430,8 @@ fn check_testnet_minimum_difficulty_block(height: block::Height) -> Result<(), R
     let block = zebra_test::vectors::TESTNET_BLOCKS
         .get(&height.0)
         .expect("test vectors contain the specified minimum difficulty block height");
-    let block = Block::zcash_deserialize(&block[..]).expect("block test vector should deserialize");
+    let block =
+        Block::bitcoin_deserialize(&block[..]).expect("block test vector should deserialize");
     let hash = block.hash();
 
     /// SPANDOC: Check the testnet minimum difficulty start height {?height, ?hash}
@@ -449,7 +451,7 @@ fn check_testnet_minimum_difficulty_block(height: block::Height) -> Result<(), R
         }
 
         let previous_block = previous_block.unwrap();
-        let previous_block = Block::zcash_deserialize(&previous_block[..])
+        let previous_block = Block::bitcoin_deserialize(&previous_block[..])
             .expect("block test vector should deserialize");
         let time_gap = block
             .header

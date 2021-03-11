@@ -7,17 +7,17 @@ use std::io;
 
 use secp256k1::PublicKey;
 
-use crate::serialization::{SerializationError, ZcashDeserialize, ZcashSerialize};
+use crate::{serialization::SerializationError, BitcoinDeserialize, BitcoinSerialize};
 
-impl ZcashSerialize for PublicKey {
-    fn zcash_serialize<W: io::Write>(&self, mut writer: W) -> Result<(), io::Error> {
+impl BitcoinSerialize for PublicKey {
+    fn bitcoin_serialize<W: io::Write>(&self, mut writer: W) -> Result<(), io::Error> {
         writer.write_all(&self.serialize())?;
         Ok(())
     }
 }
 
-impl ZcashDeserialize for PublicKey {
-    fn zcash_deserialize<R: io::Read>(mut reader: R) -> Result<Self, SerializationError> {
+impl BitcoinDeserialize for PublicKey {
+    fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<Self, SerializationError> {
         let mut bytes = [0; 33];
         reader.read_exact(&mut bytes[..])?;
         Self::from_slice(&bytes[..])

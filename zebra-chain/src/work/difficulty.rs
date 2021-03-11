@@ -12,6 +12,8 @@
 #![allow(clippy::unit_arg)]
 
 use crate::{block, parameters::Network};
+use crate::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
+use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
 
 use std::{
     cmp::{Ordering, PartialEq, PartialOrd},
@@ -58,7 +60,7 @@ mod tests;
 /// Without these consensus rules, some `ExpandedDifficulty` values would have
 /// multiple equivalent `CompactDifficulty` values, due to redundancy in the
 /// floating-point format.
-#[derive(Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Eq, PartialEq, Serialize, Deserialize, BtcSerialize, BtcDeserialize)]
 pub struct CompactDifficulty(pub(crate) u32);
 
 impl fmt::Debug for CompactDifficulty {

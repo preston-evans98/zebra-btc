@@ -6,8 +6,9 @@ use std::{fmt, io::Write};
 #[cfg(any(any(test, feature = "proptest-impl"), feature = "proptest-impl"))]
 use proptest_derive::Arbitrary;
 
-use crate::serialization::sha256d;
+use crate::serialization::{sha256d, BitcoinDeserialize, BitcoinSerialize, SerializationError};
 use crate::transaction::{self, Transaction};
+use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
 
 /// The root of the Bitcoin-inherited transaction Merkle tree, binding the
 /// block header to the transactions in the block.
@@ -61,7 +62,7 @@ use crate::transaction::{self, Transaction};
 /// This vulnerability does not apply to Zebra, because it does not store invalid
 /// data on disk, and because it does not permanently fail blocks or use an
 /// aggressive anti-DoS mechanism.
-#[derive(Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Eq, PartialEq, Serialize, Deserialize, BtcSerialize, BtcDeserialize)]
 #[cfg_attr(any(test, feature = "proptest-impl"), derive(Arbitrary))]
 pub struct Root(pub [u8; 32]);
 
@@ -119,12 +120,12 @@ impl std::iter::FromIterator<transaction::Hash> for Root {
 mod tests {
     use super::*;
 
-    use crate::{block::Block, serialization::ZcashDeserialize};
+    use crate::{block::Block, BitcoinDeserialize};
 
     #[test]
     fn block_test_vectors() {
         for block_bytes in zebra_test::vectors::BLOCKS.iter() {
-            let block = Block::zcash_deserialize(&**block_bytes).unwrap();
+            let block = Block::bitcoin_deserialize(&**block_bytes).unwrap();
             let merkle_root = block.transactions.iter().collect::<Root>();
             assert_eq!(
                 merkle_root,

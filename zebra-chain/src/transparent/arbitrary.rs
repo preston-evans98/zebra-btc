@@ -1,6 +1,6 @@
 use proptest::{arbitrary::any, collection::vec, prelude::*};
 
-use crate::{block, LedgerState};
+use crate::{block, cached::Cached, LedgerState};
 
 use super::{CoinbaseData, Input, OutPoint, Script};
 
@@ -25,7 +25,7 @@ impl Arbitrary for Input {
         if let Some(height) = height {
             (vec(any::<u8>(), 0..95), any::<u32>())
                 .prop_map(move |(data, sequence)| Input::Coinbase {
-                    height,
+                    height: Some(Cached::from(height)),
                     data: CoinbaseData(data),
                     sequence,
                 })

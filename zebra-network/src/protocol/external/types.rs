@@ -38,15 +38,15 @@ impl From<Network> for Magic {
 
 /// A protocol version number.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Version(pub u32);
+pub struct ProtocolVersion(pub u32);
 
-impl Version {
+impl ProtocolVersion {
     /// Returns the minimum network protocol version for `network` and
     /// `network_upgrade`.
     pub fn min_for_upgrade(network: Network, network_upgrade: NetworkUpgrade) -> Self {
         // TODO: Should we reject earlier protocol versions during our initial
         //       sync? zcashd accepts 170_002 or later during its initial sync.
-        Version(match (network, network_upgrade) {
+        ProtocolVersion(match (network, network_upgrade) {
             (_, Genesis) | (_, BeforeOverwinter) => 170_002,
             (Testnet, Overwinter) => 170_003,
             (Mainnet, Overwinter) => 170_005,
@@ -64,9 +64,9 @@ impl Version {
     ///
     /// Returns None if the network has no branch id at this height.
     #[allow(dead_code)]
-    pub fn current_min(network: Network, height: block::Height) -> Version {
+    pub fn current_min(network: Network, height: block::Height) -> ProtocolVersion {
         let network_upgrade = NetworkUpgrade::current(network, height);
-        Version::min_for_upgrade(network, network_upgrade)
+        ProtocolVersion::min_for_upgrade(network, network_upgrade)
     }
 }
 
@@ -159,15 +159,15 @@ mod test {
         zebra_test::init();
 
         assert_eq!(
-            Version::current_min(network, block::Height(0)),
-            Version::min_for_upgrade(network, BeforeOverwinter),
+            ProtocolVersion::current_min(network, block::Height(0)),
+            ProtocolVersion::min_for_upgrade(network, BeforeOverwinter),
         );
 
         // We assume that the last version we know about continues forever
         // (even if we suspect that won't be true)
         assert_ne!(
-            Version::current_min(network, block::Height::MAX),
-            Version::min_for_upgrade(network, BeforeOverwinter),
+            ProtocolVersion::current_min(network, block::Height::MAX),
+            ProtocolVersion::min_for_upgrade(network, BeforeOverwinter),
         );
     }
 
@@ -201,8 +201,8 @@ mod test {
             let height = network_upgrade.activation_height(network);
             if let Some(height) = height {
                 assert_eq!(
-                    Version::min_for_upgrade(network, network_upgrade),
-                    Version::current_min(network, height)
+                    ProtocolVersion::min_for_upgrade(network, network_upgrade),
+                    ProtocolVersion::current_min(network, height)
                 );
             }
         }

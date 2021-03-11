@@ -4,9 +4,12 @@ pub mod codec;
 mod inv;
 /// An enum of all supported Bitcoin message types.
 mod message;
+
+/// A single byte enum representing a Bitcoin message type.
+mod command;
 /// Newtype wrappers for primitive types.
 pub mod types;
 
 pub use codec::Codec;
 pub use inv::InventoryHash;
-pub use message::Message;
+pub use message::{Message, Version};

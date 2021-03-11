@@ -21,18 +21,21 @@
 #[macro_use]
 extern crate serde;
 
+mod cached;
+
 pub mod amount;
 pub mod block;
+pub mod compactint;
 pub mod fmt;
 pub mod parameters;
-pub mod primitives;
-pub mod sapling;
 pub mod serialization;
 pub mod shutdown;
-pub mod sprout;
 pub mod transaction;
 pub mod transparent;
 pub mod work;
+pub use serialization::{
+    BitcoinDeserialize, BitcoinDeserializeInto, BitcoinSerialize, SerializationError,
+};
 
 #[derive(Debug, Clone, Copy)]
 #[cfg(any(test, feature = "proptest-impl"))]

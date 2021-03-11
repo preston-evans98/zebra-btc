@@ -274,6 +274,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f0dc55f2d8a1a85650ac47858bb001b4c0dd73d79e3c455a842925e68d29cd3"
 
 [[package]]
+name = "bitcoin_serde_derive"
+version = "0.1.0"
+dependencies = [
+ "quote 1.0.7",
+ "syn 1.0.60",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -457,6 +465,12 @@ name = "bytes"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e0dcbc35f504eb6fc275a6d20e4ebcda18cf50d40ba6fabff8c711fa16cb3b16"
+
+[[package]]
+name = "bytes"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
 
 [[package]]
 name = "canonical-path"
@@ -3969,12 +3983,14 @@ version = "1.0.0-alpha.1"
 dependencies = [
  "bech32",
  "bincode",
+ "bitcoin_serde_derive",
  "bitflags",
  "bitvec 0.17.4",
  "blake2b_simd",
  "blake2s_simd",
  "bs58",
  "byteorder",
+ "bytes 1.0.1",
  "chrono",
  "color-eyre",
  "displaydoc",
@@ -4043,6 +4059,7 @@ dependencies = [
 name = "zebra-network"
 version = "1.0.0-alpha.1"
 dependencies = [
+ "bitcoin_serde_derive",
  "bitflags",
  "byteorder",
  "bytes 0.6.0",
