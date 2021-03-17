@@ -26,7 +26,6 @@ use zebra_chain::{
     block::{self, Block},
     parameters::Network,
     transaction, transparent,
-    work::equihash,
 };
 use zebra_state as zs;
 
@@ -60,12 +59,11 @@ pub enum VerifyBlockError {
         source: BlockError,
     },
 
-    #[error(transparent)]
-    Equihash {
-        #[from]
-        source: equihash::Error,
-    },
-
+    // #[error(transparent)]
+    // Equihash {
+    //     #[from]
+    //     source: equihash::Error,
+    // },
     #[error(transparent)]
     Time(zebra_chain::block::BlockTimeError),
 
@@ -149,7 +147,8 @@ where
             // Do the difficulty checks first, to raise the threshold for
             // attacks that use any other fields.
             check::difficulty_is_valid(&block.header, network, &height, &hash)?;
-            check::equihash_solution_is_valid(&block.header)?;
+            // FIXME: replace
+            // check::equihash_solution_is_valid(&block.header)?;
 
             // Next, check the Merkle root validity, to ensure that
             // the header binds to the transactions in the blocks.
@@ -245,7 +244,7 @@ fn new_outputs(
         .zip(transaction_hashes.iter().cloned())
     {
         let from_coinbase = transaction.is_coinbase();
-        for (index, output) in transaction.outputs().iter().cloned().enumerate() {
+        for (index, output) in transaction.outputs.iter().cloned().enumerate() {
             let index = index as u32;
             new_outputs.insert(
                 transparent::OutPoint { hash, index },

@@ -21,10 +21,9 @@
 #[macro_use]
 extern crate serde;
 
-mod cached;
-
 pub mod amount;
 pub mod block;
+pub mod cached;
 pub mod compactint;
 pub mod fmt;
 pub mod parameters;

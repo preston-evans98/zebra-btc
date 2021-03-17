@@ -5,10 +5,7 @@ use std::{
 };
 
 use tracing::{debug_span, instrument, trace};
-use zebra_chain::{
-    block, primitives::Groth16Proof, sapling, sprout, transaction, transparent,
-    work::difficulty::PartialCumulativeWork,
-};
+use zebra_chain::{block, transaction, transparent, work::difficulty::PartialCumulativeWork};
 
 use crate::{PreparedBlock, Utxo};
 
@@ -20,10 +17,10 @@ pub struct Chain {
 
     pub created_utxos: HashMap<transparent::OutPoint, Utxo>,
     spent_utxos: HashSet<transparent::OutPoint>,
-    sprout_anchors: HashSet<sprout::tree::Root>,
-    sapling_anchors: HashSet<sapling::tree::Root>,
-    sprout_nullifiers: HashSet<sprout::Nullifier>,
-    sapling_nullifiers: HashSet<sapling::Nullifier>,
+    // sprout_anchors: HashSet<sprout::tree::Root>,
+    // sapling_anchors: HashSet<sapling::tree::Root>,
+    // sprout_nullifiers: HashSet<sprout::Nullifier>,
+    // sapling_nullifiers: HashSet<sapling::Nullifier>,
     partial_cumulative_work: PartialCumulativeWork,
 }
 
@@ -165,17 +162,7 @@ impl UpdateWith<PreparedBlock> for Chain {
             .zip(transaction_hashes.iter().cloned())
             .enumerate()
         {
-            let (inputs, shielded_data, joinsplit_data) = match transaction.deref() {
-                transaction::Transaction::V4 {
-                    inputs,
-                    shielded_data,
-                    joinsplit_data,
-                    ..
-                } => (inputs, shielded_data, joinsplit_data),
-                _ => unreachable!(
-                    "older transaction versions only exist in finalized blocks pre sapling",
-                ),
-            };
+            let inputs = &transaction.inputs;
 
             // add key `transaction.hash` and value `(height, tx_index)` to `tx_by_hash`
             let prior_pair = self
@@ -190,10 +177,10 @@ impl UpdateWith<PreparedBlock> for Chain {
             self.update_chain_state_with(&prepared.new_outputs);
             // add the utxos this consumed
             self.update_chain_state_with(inputs);
-            // add sprout anchor and nullifiers
-            self.update_chain_state_with(joinsplit_data);
-            // add sapling anchor and nullifier
-            self.update_chain_state_with(shielded_data);
+            // // add sprout anchor and nullifiers
+            // self.update_chain_state_with(joinsplit_data);
+            // // add sapling anchor and nullifier
+            // self.update_chain_state_with(shielded_data);
         }
     }
 
@@ -223,17 +210,7 @@ impl UpdateWith<PreparedBlock> for Chain {
         for (transaction, transaction_hash) in
             block.transactions.iter().zip(transaction_hashes.iter())
         {
-            let (inputs, shielded_data, joinsplit_data) = match transaction.deref() {
-                transaction::Transaction::V4 {
-                    inputs,
-                    shielded_data,
-                    joinsplit_data,
-                    ..
-                } => (inputs, shielded_data, joinsplit_data),
-                _ => unreachable!(
-                    "older transaction versions only exist in finalized blocks pre sapling",
-                ),
-            };
+            let inputs = &transaction.inputs;
 
             // remove `transaction.hash` from `tx_by_hash`
             assert!(
@@ -245,10 +222,10 @@ impl UpdateWith<PreparedBlock> for Chain {
             self.revert_chain_state_with(&prepared.new_outputs);
             // remove the utxos this consumed
             self.revert_chain_state_with(inputs);
-            // remove sprout anchor and nullifiers
-            self.revert_chain_state_with(joinsplit_data);
-            // remove sapling anchor and nullfier
-            self.revert_chain_state_with(shielded_data);
+            //     // remove sprout anchor and nullifiers
+            //     self.revert_chain_state_with(joinsplit_data);
+            //     // remove sapling anchor and nullfier
+            //     self.revert_chain_state_with(shielded_data);
         }
     }
 }
@@ -287,67 +264,6 @@ impl UpdateWith<Vec<transparent::Input>> for Chain {
                     );
                 }
                 transparent::Input::Coinbase { .. } => {}
-            }
-        }
-    }
-}
-
-impl UpdateWith<Option<transaction::JoinSplitData<Groth16Proof>>> for Chain {
-    #[instrument(skip(self, joinsplit_data))]
-    fn update_chain_state_with(
-        &mut self,
-        joinsplit_data: &Option<transaction::JoinSplitData<Groth16Proof>>,
-    ) {
-        if let Some(joinsplit_data) = joinsplit_data {
-            for sprout::JoinSplit { nullifiers, .. } in joinsplit_data.joinsplits() {
-                let span = debug_span!("revert_chain_state_with", ?nullifiers);
-                let _entered = span.enter();
-                trace!("Adding sprout nullifiers.");
-                self.sprout_nullifiers.insert(nullifiers[0]);
-                self.sprout_nullifiers.insert(nullifiers[1]);
-            }
-        }
-    }
-
-    #[instrument(skip(self, joinsplit_data))]
-    fn revert_chain_state_with(
-        &mut self,
-        joinsplit_data: &Option<transaction::JoinSplitData<Groth16Proof>>,
-    ) {
-        if let Some(joinsplit_data) = joinsplit_data {
-            for sprout::JoinSplit { nullifiers, .. } in joinsplit_data.joinsplits() {
-                let span = debug_span!("revert_chain_state_with", ?nullifiers);
-                let _entered = span.enter();
-                trace!("Removing sprout nullifiers.");
-                assert!(
-                    self.sprout_nullifiers.remove(&nullifiers[0]),
-                    "nullifiers must be present if block was"
-                );
-                assert!(
-                    self.sprout_nullifiers.remove(&nullifiers[1]),
-                    "nullifiers must be present if block was"
-                );
-            }
-        }
-    }
-}
-
-impl UpdateWith<Option<transaction::ShieldedData>> for Chain {
-    fn update_chain_state_with(&mut self, shielded_data: &Option<transaction::ShieldedData>) {
-        if let Some(shielded_data) = shielded_data {
-            for sapling::Spend { nullifier, .. } in shielded_data.spends() {
-                self.sapling_nullifiers.insert(*nullifier);
-            }
-        }
-    }
-
-    fn revert_chain_state_with(&mut self, shielded_data: &Option<transaction::ShieldedData>) {
-        if let Some(shielded_data) = shielded_data {
-            for sapling::Spend { nullifier, .. } in shielded_data.spends() {
-                assert!(
-                    self.sapling_nullifiers.remove(nullifier),
-                    "nullifier must be present if block was"
-                );
             }
         }
     }
@@ -405,7 +321,7 @@ mod tests {
         block::Block,
         fmt::SummaryDebug,
         parameters::{Network, NetworkUpgrade},
-        serialization::ZcashDeserializeInto,
+        serialization::BitcoinDeserializeInto,
         LedgerState,
     };
     use zebra_test::prelude::*;
@@ -425,7 +341,7 @@ mod tests {
     fn construct_single() -> Result<()> {
         zebra_test::init();
         let block: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_434873_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_434873_BYTES.bitcoin_deserialize_into()?;
 
         let mut chain = Chain::default();
         chain.push(block.prepare());
@@ -440,7 +356,7 @@ mod tests {
         zebra_test::init();
 
         let mut block: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_434873_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_434873_BYTES.bitcoin_deserialize_into()?;
         let mut blocks = vec![];
 
         while blocks.len() < 100 {
@@ -464,7 +380,7 @@ mod tests {
     fn ord_matches_work() -> Result<()> {
         zebra_test::init();
         let less_block = zebra_test::vectors::BLOCK_MAINNET_434873_BYTES
-            .zcash_deserialize_into::<Arc<Block>>()?
+            .bitcoin_deserialize_into::<Arc<Block>>()?
             .set_work(1);
         let more_block = less_block.clone().set_work(10);
 

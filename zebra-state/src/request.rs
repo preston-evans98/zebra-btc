@@ -126,7 +126,7 @@ impl From<Arc<Block>> for FinalizedBlock {
             .zip(transaction_hashes.iter().cloned())
         {
             let from_coinbase = transaction.is_coinbase();
-            for (index, output) in transaction.outputs().iter().cloned().enumerate() {
+            for (index, output) in transaction.outputs.iter().cloned().enumerate() {
                 let index = index as u32;
                 new_outputs.insert(
                     transparent::OutPoint { hash, index },

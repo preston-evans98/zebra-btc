@@ -129,13 +129,26 @@ impl<T: Sized + BitcoinDeserialize> BitcoinDeserialize for Option<T> {
     }
 }
 
+impl<T, U> BitcoinDeserialize for (T, U)
+where
+    T: BitcoinDeserialize,
+    U: BitcoinDeserialize,
+{
+    fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<(T, U)> {
+        Ok((
+            T::bitcoin_deserialize(&mut reader)?,
+            U::bitcoin_deserialize(&mut reader)?,
+        ))
+    }
+}
+
 // TODO: Replace when const generics stabilize
 macro_rules! impl_deserializable_byte_array {
     ($size:expr) => {
         impl BitcoinDeserialize for [u8; $size] {
             fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<[u8; $size]> {
                 let mut result = [0u8; $size];
-                reader.read_exact(&mut result);
+                reader.read_exact(&mut result)?;
                 Ok(result)
             }
         }

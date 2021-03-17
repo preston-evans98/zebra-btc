@@ -31,17 +31,17 @@ pub struct Version {
     pub services: PeerServices,
 
     /// The time when the version message was sent.
-    timestamp: DateTime<Utc>,
+    pub timestamp: DateTime<Utc>,
 
     /// The network address of the node receiving this message, and its
     /// advertised network services.
     ///
     /// Q: how does the handshake know the remote peer's services already?
-    address_recv: (PeerServices, net::SocketAddr),
+    pub address_recv: (PeerServices, net::SocketAddr),
 
     /// The network address of the node sending this message, and its
     /// advertised network services.
-    address_from: (PeerServices, net::SocketAddr),
+    pub address_from: (PeerServices, net::SocketAddr),
 
     /// Node random nonce, randomly generated every time a version
     /// packet is sent. This nonce is used to detect connections
@@ -49,14 +49,14 @@ pub struct Version {
     pub nonce: Nonce,
 
     /// The user agent advertised by the sender.
-    user_agent: String,
+    pub user_agent: String,
 
     /// The last block received by the emitting node.
-    best_block: block::Height,
+    pub best_block: block::Height,
 
     /// Whether the remote peer should announce relayed
     /// transactions or not, see [BIP 0037](https://github.com/bitcoin/bips/blob/master/bip-0037.mediawiki)
-    relay: bool,
+    pub relay: bool,
 }
 
 impl Version {

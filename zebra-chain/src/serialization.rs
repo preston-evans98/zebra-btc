@@ -238,6 +238,21 @@ where
         Ok(())
     }
 }
+
+impl<T, U> BitcoinSerialize for (T, U)
+where
+    T: BitcoinSerialize,
+    U: BitcoinSerialize,
+{
+    fn bitcoin_serialize<W>(&self, mut target: W) -> std::result::Result<(), std::io::Error>
+    where
+        W: std::io::Write,
+    {
+        self.0.bitcoin_serialize(&mut target)?;
+        self.1.bitcoin_serialize(&mut target)?;
+        Ok(())
+    }
+}
 impl BitcoinSerialize for String {
     fn bitcoin_serialize<W>(&self, mut target: W) -> Result<(), std::io::Error>
     where

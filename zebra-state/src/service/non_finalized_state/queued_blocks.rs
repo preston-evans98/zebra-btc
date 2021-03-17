@@ -160,7 +160,7 @@ mod tests {
     use std::sync::Arc;
 
     use tokio::sync::oneshot;
-    use zebra_chain::{block::Block, serialization::ZcashDeserializeInto};
+    use zebra_chain::{block::Block, serialization::BitcoinDeserializeInto};
     use zebra_test::prelude::*;
 
     use crate::tests::{FakeChainHelper, Prepare};
@@ -185,9 +185,9 @@ mod tests {
         zebra_test::init();
 
         let block1: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.bitcoin_deserialize_into()?;
         let child1: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_419201_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_419201_BYTES.bitcoin_deserialize_into()?;
         let child2 = block1.make_fake_child();
 
         let parent = block1.header.previous_block_hash;
@@ -249,9 +249,9 @@ mod tests {
         zebra_test::init();
 
         let block1: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.bitcoin_deserialize_into()?;
         let child1: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_419201_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_419201_BYTES.bitcoin_deserialize_into()?;
         let child2 = block1.make_fake_child();
 
         let mut queue = QueuedBlocks::default();

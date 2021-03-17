@@ -95,7 +95,7 @@ pub fn find_output_with_amount(
 ) -> Vec<transparent::Output> {
     // TODO: shielded coinbase - Heartwood
     transaction
-        .outputs()
+        .outputs
         .iter()
         .filter(|o| o.value == amount)
         .cloned()

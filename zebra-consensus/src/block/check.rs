@@ -6,7 +6,7 @@ use zebra_chain::{
     block::{Block, Hash, Header, Height},
     parameters::{Network, NetworkUpgrade},
     transaction,
-    work::{difficulty::ExpandedDifficulty, equihash},
+    work::difficulty::ExpandedDifficulty,
 };
 
 use crate::{error::*, parameters::SLOW_START_INTERVAL};
@@ -88,10 +88,11 @@ pub fn difficulty_is_valid(
     Ok(())
 }
 
-/// Returns `Ok(())` if the `EquihashSolution` is valid for `header`
-pub fn equihash_solution_is_valid(header: &Header) -> Result<(), equihash::Error> {
-    header.solution.check(&header)
-}
+// /// Returns `Ok(())` if the `EquihashSolution` is valid for `header`
+// pub fn equihash_solution_is_valid(header: &Header) -> Result<(), equihash::Error> {
+//     todo!()
+//     // header.solution.check(&header)
+// }
 
 /// Returns `Ok(())` if the block subsidy and miner fees in `block` are valid for `network`
 ///

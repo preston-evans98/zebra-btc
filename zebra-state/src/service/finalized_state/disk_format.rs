@@ -4,9 +4,8 @@ use std::{convert::TryInto, fmt::Debug, sync::Arc};
 use zebra_chain::{
     block,
     block::Block,
-    sapling,
-    serialization::{ZcashDeserialize, ZcashDeserializeInto, ZcashSerialize},
-    sprout, transaction, transparent,
+    serialization::{BitcoinDeserialize, BitcoinDeserializeInto, BitcoinSerialize},
+    transaction, transparent,
 };
 
 use crate::Utxo;
@@ -76,14 +75,14 @@ impl IntoDisk for Block {
     type Bytes = Vec<u8>;
 
     fn as_bytes(&self) -> Self::Bytes {
-        self.zcash_serialize_to_vec()
+        self.bitcoin_serialize_to_vec()
             .expect("serialization to vec doesn't fail")
     }
 }
 
 impl FromDisk for Block {
     fn from_bytes(bytes: impl AsRef<[u8]>) -> Self {
-        Block::zcash_deserialize(bytes.as_ref())
+        Block::bitcoin_deserialize(bytes.as_ref())
             .expect("deserialization format should match the serialization format used by IntoDisk")
     }
 }
@@ -147,22 +146,6 @@ impl FromDisk for block::Hash {
     }
 }
 
-impl IntoDisk for sprout::Nullifier {
-    type Bytes = [u8; 32];
-
-    fn as_bytes(&self) -> Self::Bytes {
-        self.0
-    }
-}
-
-impl IntoDisk for sapling::Nullifier {
-    type Bytes = [u8; 32];
-
-    fn as_bytes(&self) -> Self::Bytes {
-        self.0
-    }
-}
-
 impl IntoDisk for () {
     type Bytes = [u8; 0];
 
@@ -194,7 +177,7 @@ impl IntoDisk for Utxo {
         bytes[0..4].copy_from_slice(&self.height.0.to_be_bytes());
         bytes[4] = self.from_coinbase as u8;
         self.output
-            .zcash_serialize(&mut bytes)
+            .bitcoin_serialize(&mut bytes)
             .expect("serialization to vec doesn't fail");
         bytes
     }
@@ -206,7 +189,7 @@ impl FromDisk for Utxo {
         let height = block::Height(u32::from_be_bytes(meta_bytes[0..4].try_into().unwrap()));
         let from_coinbase = meta_bytes[4] == 1u8;
         let output = output_bytes
-            .zcash_deserialize_into()
+            .bitcoin_deserialize_into()
             .expect("db has serialized data");
         Self {
             output,
@@ -220,7 +203,7 @@ impl IntoDisk for transparent::OutPoint {
     type Bytes = Vec<u8>;
 
     fn as_bytes(&self) -> Self::Bytes {
-        self.zcash_serialize_to_vec()
+        self.bitcoin_serialize_to_vec()
             .expect("serialization to vec doesn't fail")
     }
 }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use futures::stream::FuturesUnordered;
 use tower::{util::BoxService, Service, ServiceExt};
 use zebra_chain::{
-    block::Block, parameters::Network, serialization::ZcashDeserializeInto, transaction,
+    block::Block, parameters::Network, serialization::BitcoinDeserializeInto, transaction,
     transparent,
 };
 use zebra_test::{prelude::*, transcript::Transcript};
@@ -43,7 +43,11 @@ async fn test_populated_state_responds_correctly(
 ) -> Result<()> {
     let blocks = zebra_test::vectors::MAINNET_BLOCKS
         .range(0..=LAST_BLOCK_HEIGHT)
-        .map(|(_, block_bytes)| block_bytes.zcash_deserialize_into::<Arc<Block>>().unwrap());
+        .map(|(_, block_bytes)| {
+            block_bytes
+                .bitcoin_deserialize_into::<Arc<Block>>()
+                .unwrap()
+        });
 
     for (ind, block) in blocks.into_iter().enumerate() {
         let mut transcript = vec![];
@@ -81,7 +85,7 @@ async fn test_populated_state_responds_correctly(
                 ));
 
                 let from_coinbase = transaction.is_coinbase();
-                for (index, output) in transaction.outputs().iter().cloned().enumerate() {
+                for (index, output) in transaction.outputs.iter().cloned().enumerate() {
                     let outpoint = transparent::OutPoint {
                         hash: transaction_hash,
                         index: index as _,
@@ -114,7 +118,11 @@ async fn populate_and_check(blocks: Vec<Arc<Block>>) -> Result<()> {
 fn out_of_order_committing_strategy() -> BoxedStrategy<Vec<Arc<Block>>> {
     let blocks = zebra_test::vectors::MAINNET_BLOCKS
         .range(0..=LAST_BLOCK_HEIGHT)
-        .map(|(_, block_bytes)| block_bytes.zcash_deserialize_into::<Arc<Block>>().unwrap())
+        .map(|(_, block_bytes)| {
+            block_bytes
+                .bitcoin_deserialize_into::<Arc<Block>>()
+                .unwrap()
+        })
         .collect::<Vec<_>>();
 
     Just(blocks).prop_shuffle().boxed()
@@ -125,7 +133,7 @@ async fn empty_state_still_responds_to_requests() -> Result<()> {
     zebra_test::init();
 
     let block =
-        zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.zcash_deserialize_into::<Arc<Block>>()?;
+        zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.bitcoin_deserialize_into::<Arc<Block>>()?;
 
     let iter = vec![
         // No checks for CommitBlock or CommitFinalizedBlock because empty state
@@ -165,7 +173,11 @@ fn state_behaves_when_blocks_are_committed_in_order() -> Result<()> {
 
     let blocks = zebra_test::vectors::MAINNET_BLOCKS
         .range(0..=LAST_BLOCK_HEIGHT)
-        .map(|(_, block_bytes)| block_bytes.zcash_deserialize_into::<Arc<Block>>().unwrap())
+        .map(|(_, block_bytes)| {
+            block_bytes
+                .bitcoin_deserialize_into::<Arc<Block>>()
+                .unwrap()
+        })
         .collect();
 
     populate_and_check(blocks)?;

@@ -2,7 +2,7 @@ use color_eyre::eyre::Report;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 use tempdir::TempDir;
-use zebra_chain::{block::Block, parameters::Network, serialization::ZcashDeserialize};
+use zebra_chain::{block::Block, parameters::Network, serialization::BitcoinDeserialize};
 use zebra_test::transcript::{TransError, Transcript};
 
 use zebra_state::*;
@@ -10,7 +10,7 @@ use zebra_state::*;
 static COMMIT_FINALIZED_BLOCK_MAINNET: Lazy<Vec<(Request, Result<Response, TransError>)>> =
     Lazy::new(|| {
         let block: Arc<_> =
-            Block::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])
+            Block::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])
                 .unwrap()
                 .into();
         let block2 = block.clone();
@@ -30,7 +30,7 @@ static COMMIT_FINALIZED_BLOCK_MAINNET: Lazy<Vec<(Request, Result<Response, Trans
 static COMMIT_FINALIZED_BLOCK_TESTNET: Lazy<Vec<(Request, Result<Response, TransError>)>> =
     Lazy::new(|| {
         let block: Arc<_> =
-            Block::zcash_deserialize(&zebra_test::vectors::BLOCK_TESTNET_GENESIS_BYTES[..])
+            Block::bitcoin_deserialize(&zebra_test::vectors::BLOCK_TESTNET_GENESIS_BYTES[..])
                 .unwrap()
                 .into();
         let block2 = block.clone();

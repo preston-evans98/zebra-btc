@@ -7,7 +7,7 @@
 
 use thiserror::Error;
 
-use zebra_chain::{block, primitives::ed25519};
+use zebra_chain::block;
 
 use crate::BoxError;
 
@@ -55,18 +55,18 @@ pub enum TransactionError {
     #[error("could not verify a transparent script")]
     Script(#[from] zebra_script::Error),
 
-    // XXX change this when we align groth16 verifier errors with bellman
-    // and add a from annotation when the error type is more precise
-    #[error("spend proof MUST be valid given a primary input formed from the other fields except spendAuthSig")]
-    Groth16,
+    // // XXX change this when we align groth16 verifier errors with bellman
+    // // and add a from annotation when the error type is more precise
+    // #[error("spend proof MUST be valid given a primary input formed from the other fields except spendAuthSig")]
+    // Groth16,
 
-    #[error(
-        "joinSplitSig MUST represent a valid signature under joinSplitPubKey of dataToBeSigned"
-    )]
-    Ed25519(#[from] ed25519::Error),
+    // #[error(
+    //     "joinSplitSig MUST represent a valid signature under joinSplitPubKey of dataToBeSigned"
+    // )]
+    // Ed25519(#[from] ed25519::Error),
 
-    #[error("bindingSig MUST represent a valid signature under the transaction binding validating key bvk of SigHash")]
-    RedJubjub(redjubjub::Error),
+    // #[error("bindingSig MUST represent a valid signature under the transaction binding validating key bvk of SigHash")]
+    // RedJubjub(redjubjub::Error),
 
     // temporary error type until #1186 is fixed
     #[error("Downcast from BoxError to redjubjub::Error failed")]
@@ -75,13 +75,15 @@ pub enum TransactionError {
 
 impl From<BoxError> for TransactionError {
     fn from(err: BoxError) -> Self {
-        match err.downcast::<redjubjub::Error>() {
-            Ok(e) => TransactionError::RedJubjub(*e),
-            Err(e) => TransactionError::InternalDowncastError(format!(
-                "downcast to redjubjub::Error failed, original error: {:?}",
-                e
-            )),
-        }
+        // FIXME:
+        TransactionError::InternalDowncastError(format!("Should be unreachable: {}", err))
+        // match err.downcast::<>() {
+        //     Ok(e) => TransactionError::RedJubjub(*e),
+        //     Err(e) => TransactionError::InternalDowncastError(format!(
+        //         "downcast to redjubjub::Error failed, original error: {:?}",
+        //         e
+        //     )),
+        // }
     }
 }
 

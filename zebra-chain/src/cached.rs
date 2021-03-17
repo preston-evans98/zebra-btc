@@ -16,9 +16,15 @@ impl<T: Clone + Copy> Cached<T> {
     pub fn value(&self) -> Option<T> {
         self.0
     }
+    pub fn mut_value(&mut self) -> &mut Option<T> {
+        &mut self.0
+    }
     pub fn has_value(&self) -> bool {
         self.0.is_some()
     }
+    // pub fn set_value(&mut self, new: T) {
+    //     self.0 = new
+    // }
 }
 
 impl<T: Clone + Copy> std::fmt::Debug for Cached<T>

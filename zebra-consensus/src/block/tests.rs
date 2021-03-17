@@ -14,7 +14,7 @@ use tower::buffer::Buffer;
 use zebra_chain::{
     block::{self, Block, Height},
     parameters::{Network, NetworkUpgrade},
-    serialization::{ZcashDeserialize, ZcashDeserializeInto},
+    serialization::{BitcoinDeserialize, BitcoinDeserializeInto},
     work::difficulty::{ExpandedDifficulty, INVALID_COMPACT_DIFFICULTY},
 };
 use zebra_test::transcript::{TransError, Transcript};
@@ -22,7 +22,7 @@ use zebra_test::transcript::{TransError, Transcript};
 static VALID_BLOCK_TRANSCRIPT: Lazy<Vec<(Arc<Block>, Result<block::Hash, TransError>)>> =
     Lazy::new(|| {
         let block: Arc<_> =
-            Block::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])
+            Block::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])
                 .unwrap()
                 .into();
         let hash = Ok(block.as_ref().into());
@@ -32,7 +32,7 @@ static VALID_BLOCK_TRANSCRIPT: Lazy<Vec<(Arc<Block>, Result<block::Hash, TransEr
 static INVALID_TIME_BLOCK_TRANSCRIPT: Lazy<Vec<(Arc<Block>, Result<block::Hash, TransError>)>> =
     Lazy::new(|| {
         let mut block: Block =
-            Block::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])
+            Block::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])
                 .unwrap();
 
         // Modify the block's time
@@ -52,10 +52,10 @@ static INVALID_HEADER_SOLUTION_TRANSCRIPT: Lazy<
     Vec<(Arc<Block>, Result<block::Hash, TransError>)>,
 > = Lazy::new(|| {
     let mut block: Block =
-        Block::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..]).unwrap();
+        Block::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..]).unwrap();
 
     // Change nonce to something invalid
-    block.header.nonce = [0; 32];
+    block.header.nonce = 0;
 
     vec![(Arc::new(block), Err(TransError::Any))]
 });
@@ -63,7 +63,7 @@ static INVALID_HEADER_SOLUTION_TRANSCRIPT: Lazy<
 static INVALID_COINBASE_TRANSCRIPT: Lazy<Vec<(Arc<Block>, Result<block::Hash, TransError>)>> =
     Lazy::new(|| {
         let header =
-            block::Header::zcash_deserialize(&zebra_test::vectors::DUMMY_HEADER[..]).unwrap();
+            block::Header::bitcoin_deserialize(&zebra_test::vectors::DUMMY_HEADER[..]).unwrap();
 
         // Test 1: Empty transaction
         let block1 = Block {
@@ -74,7 +74,7 @@ static INVALID_COINBASE_TRANSCRIPT: Lazy<Vec<(Arc<Block>, Result<block::Hash, Tr
         // Test 2: Transaction at first position is not coinbase
         let mut transactions = Vec::new();
         let tx = zebra_test::vectors::DUMMY_TX1
-            .zcash_deserialize_into()
+            .bitcoin_deserialize_into()
             .unwrap();
         transactions.push(tx);
         let block2 = Block {
@@ -84,7 +84,7 @@ static INVALID_COINBASE_TRANSCRIPT: Lazy<Vec<(Arc<Block>, Result<block::Hash, Tr
 
         // Test 3: Invalid coinbase position
         let mut block3 =
-            Block::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])
+            Block::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])
                 .unwrap();
         assert_eq!(block3.transactions.len(), 1);
 
@@ -143,7 +143,7 @@ fn coinbase_is_first_for_historical_blocks() -> Result<(), Report> {
 
     for block in block_iter {
         let block = block
-            .zcash_deserialize_into::<Block>()
+            .bitcoin_deserialize_into::<Block>()
             .expect("block is structurally valid");
 
         check::coinbase_is_first(&block)
@@ -171,7 +171,7 @@ fn difficulty_is_valid_for_network(network: Network) -> Result<(), Report> {
 
     for (&height, block) in block_iter {
         let block = block
-            .zcash_deserialize_into::<Block>()
+            .bitcoin_deserialize_into::<Block>()
             .expect("block is structurally valid");
 
         check::difficulty_is_valid(&block.header, network, &Height(height), &block.hash())
@@ -188,7 +188,7 @@ fn difficulty_validation_failure() -> Result<(), Report> {
 
     // Get a block in the mainnet, and mangle its difficulty field
     let block =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_415000_BYTES[..])
+        Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_415000_BYTES[..])
             .expect("block should deserialize");
     let mut block = Arc::try_unwrap(block).expect("block should unwrap");
     let height = block.coinbase_height().unwrap();
@@ -205,7 +205,7 @@ fn difficulty_validation_failure() -> Result<(), Report> {
 
     // Get a block in the testnet, but tell the validator it's from the mainnet
     let block =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_TESTNET_925483_BYTES[..])
+        Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_TESTNET_925483_BYTES[..])
             .expect("block should deserialize");
     let block = Arc::try_unwrap(block).expect("block should unwrap");
     let height = block.coinbase_height().unwrap();
@@ -226,7 +226,7 @@ fn difficulty_validation_failure() -> Result<(), Report> {
 
     // Get a block in the mainnet, but pass an easy hash to the validator
     let block =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_415000_BYTES[..])
+        Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_415000_BYTES[..])
             .expect("block should deserialize");
     let block = Arc::try_unwrap(block).expect("block should unwrap");
     let height = block.coinbase_height().unwrap();
@@ -251,11 +251,12 @@ fn equihash_is_valid_for_historical_blocks() -> Result<(), Report> {
 
     for block in block_iter {
         let block = block
-            .zcash_deserialize_into::<Block>()
+            .bitcoin_deserialize_into::<Block>()
             .expect("block is structurally valid");
 
-        check::equihash_solution_is_valid(&block.header)
-            .expect("the equihash solution from a historical block should be valid");
+        // FIXME: Replace
+        // check::equihash_solution_is_valid(&block.header)
+        //     .expect("the equihash solution from a historical block should be valid");
     }
 
     Ok(())
@@ -279,7 +280,7 @@ fn subsidy_is_valid_for_network(network: Network) -> Result<(), Report> {
 
     for (&height, block) in block_iter {
         let block = block
-            .zcash_deserialize_into::<Block>()
+            .bitcoin_deserialize_into::<Block>()
             .expect("block is structurally valid");
 
         // TODO: first halving, second halving, third halving, and very large halvings
@@ -303,7 +304,7 @@ fn coinbase_validation_failure() -> Result<(), Report> {
     // Get a block in the mainnet that is inside the founders reward period,
     // and delete the coinbase transaction
     let block =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_415000_BYTES[..])
+        Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_415000_BYTES[..])
             .expect("block should deserialize");
     let mut block = Arc::try_unwrap(block).expect("block should unwrap");
 
@@ -322,7 +323,7 @@ fn coinbase_validation_failure() -> Result<(), Report> {
 
     // Get another founders reward block, and delete the coinbase transaction
     let block =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_434873_BYTES[..])
+        Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_434873_BYTES[..])
             .expect("block should deserialize");
     let mut block = Arc::try_unwrap(block).expect("block should unwrap");
 
@@ -341,7 +342,7 @@ fn coinbase_validation_failure() -> Result<(), Report> {
 
     // Get another founders reward block, and duplicate the coinbase transaction
     let block =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_434873_BYTES[..])
+        Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_434873_BYTES[..])
             .expect("block should deserialize");
     let mut block = Arc::try_unwrap(block).expect("block should unwrap");
 
@@ -366,48 +367,48 @@ fn coinbase_validation_failure() -> Result<(), Report> {
     Ok(())
 }
 
-#[test]
-fn founders_reward_validation_failure() -> Result<(), Report> {
-    zebra_test::init();
-    use crate::error::*;
-    use zebra_chain::transaction::Transaction;
+// #[test]
+// fn founders_reward_validation_failure() -> Result<(), Report> {
+//     zebra_test::init();
+//     use crate::error::*;
+//     use zebra_chain::transaction::Transaction;
 
-    let network = Network::Mainnet;
+//     let network = Network::Mainnet;
 
-    // Get a block in the mainnet that is inside the founders reward period.
-    let block =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_415000_BYTES[..])
-            .expect("block should deserialize");
+//     // Get a block in the mainnet that is inside the founders reward period.
+//     let block =
+//         Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_415000_BYTES[..])
+//             .expect("block should deserialize");
 
-    // Build the new transaction with modified coinbase outputs
-    let tx = block
-        .transactions
-        .get(0)
-        .map(|transaction| Transaction::V3 {
-            inputs: transaction.inputs().to_vec(),
-            outputs: vec![transaction.outputs()[0].clone()],
-            lock_time: transaction.lock_time(),
-            expiry_height: transaction.expiry_height().unwrap(),
-            joinsplit_data: None,
-        })
-        .unwrap();
+//     // Build the new transaction with modified coinbase outputs
+//     let tx = block
+//         .transactions
+//         .get(0)
+//         .map(|transaction| Transaction::V3 {
+//             inputs: transaction.inputs().to_vec(),
+//             outputs: vec![transaction.outputs()[0].clone()],
+//             lock_time: transaction.lock_time(),
+//             expiry_height: transaction.expiry_height().unwrap(),
+//             joinsplit_data: None,
+//         })
+//         .unwrap();
 
-    // Build new block
-    let transactions: Vec<Arc<zebra_chain::transaction::Transaction>> = vec![Arc::new(tx)];
-    let block = Block {
-        header: block.header,
-        transactions,
-    };
+//     // Build new block
+//     let transactions: Vec<Arc<zebra_chain::transaction::Transaction>> = vec![Arc::new(tx)];
+//     let block = Block {
+//         header: block.header,
+//         transactions,
+//     };
 
-    // Validate it
-    let result = check::subsidy_is_valid(&block, network).unwrap_err();
-    let expected = BlockError::Transaction(TransactionError::Subsidy(
-        SubsidyError::FoundersRewardNotFound,
-    ));
-    assert_eq!(expected, result);
+//     // Validate it
+//     let result = check::subsidy_is_valid(&block, network).unwrap_err();
+//     let expected = BlockError::Transaction(TransactionError::Subsidy(
+//         SubsidyError::FoundersRewardNotFound,
+//     ));
+//     assert_eq!(expected, result);
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 #[test]
 fn time_is_valid_for_historical_blocks() -> Result<(), Report> {
@@ -418,7 +419,7 @@ fn time_is_valid_for_historical_blocks() -> Result<(), Report> {
 
     for block in block_iter {
         let block = block
-            .zcash_deserialize_into::<Block>()
+            .bitcoin_deserialize_into::<Block>()
             .expect("block is structurally valid");
 
         // This check is non-deterministic, but the block test vectors are

@@ -107,15 +107,15 @@ mod tests {
         let (conn, _) = listener.accept().await.unwrap();
 
         let mut stream = Framed::new(conn, Codec::builder().finish());
-        if let Message::Version {
-            services,
-            timestamp,
-            address_from,
-            user_agent,
-            start_height,
-            relay,
-            ..
-        } = stream
+        if let Message::Version(
+            version, // services,
+                     // timestamp,
+                     // address_from,
+                     // user_agent,
+                     // start_height,
+                     // relay,
+                     // ..
+        ) = stream
             .next()
             .await
             .expect("stream item")
@@ -123,15 +123,15 @@ mod tests {
         {
             // Check that the version message sent by connect_isolated
             // has the fields specified in the Stolon RFC.
-            assert_eq!(services, PeerServices::empty());
-            assert_eq!(timestamp.timestamp() % (5 * 60), 0);
+            assert_eq!(version.services, PeerServices::empty());
+            assert_eq!(version.timestamp.timestamp() % (5 * 60), 0);
             assert_eq!(
-                address_from,
+                version.address_from,
                 (PeerServices::empty(), "0.0.0.0:8233".parse().unwrap())
             );
-            assert_eq!(user_agent, "");
-            assert_eq!(start_height.0, 0);
-            assert_eq!(relay, false);
+            assert_eq!(version.user_agent, "");
+            assert_eq!(version.best_block.0, 0);
+            assert_eq!(version.relay, false);
         } else {
             panic!("handshake did not send version message");
         }

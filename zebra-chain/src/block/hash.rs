@@ -21,7 +21,7 @@ use super::Header;
 pub struct Hash(pub [u8; 32]);
 
 impl Hash {
-    pub fn from_bytes(bytes: [u8; 32]) -> Hash {
+    pub fn from_bytes_exact(bytes: [u8; 32]) -> Hash {
         Hash(bytes)
     }
 }

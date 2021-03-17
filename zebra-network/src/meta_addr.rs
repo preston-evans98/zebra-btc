@@ -9,9 +9,7 @@ use std::{
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use chrono::{DateTime, TimeZone, Utc};
 
-use zebra_chain::serialization::{
-    ReadZcashExt, SerializationError, WriteZcashExt, ZcashDeserialize, ZcashSerialize,
-};
+use zebra_chain::serialization::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
 
 use crate::protocol::types::PeerServices;
 
@@ -66,22 +64,22 @@ impl PartialOrd for MetaAddr {
     }
 }
 
-impl ZcashSerialize for MetaAddr {
-    fn zcash_serialize<W: Write>(&self, mut writer: W) -> Result<(), std::io::Error> {
-        writer.write_u32::<LittleEndian>(self.last_seen.timestamp() as u32)?;
-        writer.write_u64::<LittleEndian>(self.services.bits())?;
-        writer.write_socket_addr(self.addr)?;
+impl BitcoinSerialize for MetaAddr {
+    fn bitcoin_serialize<W: Write>(&self, mut writer: W) -> Result<(), std::io::Error> {
+        (self.last_seen.timestamp() as u32).bitcoin_serialize(&mut writer)?;
+        self.services.bits().bitcoin_serialize(&mut writer)?;
+        self.addr.bitcoin_serialize(&mut writer)?;
         Ok(())
     }
 }
 
-impl ZcashDeserialize for MetaAddr {
-    fn zcash_deserialize<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
+impl BitcoinDeserialize for MetaAddr {
+    fn bitcoin_deserialize<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
         Ok(MetaAddr {
-            last_seen: Utc.timestamp(reader.read_u32::<LittleEndian>()? as i64, 0),
+            last_seen: Utc.timestamp(u32::bitcoin_deserialize(&mut reader)? as i64, 0),
             // Discard unknown service bits.
-            services: PeerServices::from_bits_truncate(reader.read_u64::<LittleEndian>()?),
-            addr: reader.read_socket_addr()?,
+            services: PeerServices::from_bits_truncate(u64::bitcoin_deserialize(&mut reader)?),
+            addr: SocketAddr::bitcoin_deserialize(&mut reader)?,
         })
     }
 }

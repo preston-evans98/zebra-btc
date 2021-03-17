@@ -263,7 +263,7 @@ impl FinalizedState {
                 batch.zs_insert(tx_by_hash, transaction_hash, transaction_location);
 
                 // Mark all transparent inputs as spent
-                for input in transaction.inputs() {
+                for input in transaction.inputs.iter() {
                     match input {
                         transparent::Input::PrevOut { outpoint, .. } => {
                             batch.delete_cf(utxo_by_outpoint, outpoint.as_bytes());
@@ -274,13 +274,13 @@ impl FinalizedState {
                     }
                 }
 
-                // Mark sprout and sapling nullifiers as spent
-                for sprout_nullifier in transaction.sprout_nullifiers() {
-                    batch.zs_insert(sprout_nullifiers, sprout_nullifier, ());
-                }
-                for sapling_nullifier in transaction.sapling_nullifiers() {
-                    batch.zs_insert(sapling_nullifiers, sapling_nullifier, ());
-                }
+                // // Mark sprout and sapling nullifiers as spent
+                // for sprout_nullifier in transaction.sprout_nullifiers() {
+                //     batch.zs_insert(sprout_nullifiers, sprout_nullifier, ());
+                // }
+                // for sapling_nullifier in transaction.sapling_nullifiers() {
+                //     batch.zs_insert(sapling_nullifiers, sapling_nullifier, ());
+                // }
             }
 
             batch
@@ -410,27 +410,27 @@ fn block_precommit_metrics(finalized: &FinalizedBlock) {
     let transparent_prevout_count = block
         .transactions
         .iter()
-        .flat_map(|t| t.inputs().iter())
+        .flat_map(|t| t.inputs.iter())
         .count()
         // Each block has a single coinbase input which is not a previous output.
         - 1;
     let transparent_newout_count = block
         .transactions
         .iter()
-        .flat_map(|t| t.outputs().iter())
+        .flat_map(|t| t.outputs.iter())
         .count();
 
-    let sprout_nullifier_count = block
-        .transactions
-        .iter()
-        .flat_map(|t| t.sprout_nullifiers())
-        .count();
+    // let sprout_nullifier_count = block
+    //     .transactions
+    //     .iter()
+    //     .flat_map(|t| t.sprout_nullifiers())
+    //     .count();
 
-    let sapling_nullifier_count = block
-        .transactions
-        .iter()
-        .flat_map(|t| t.sapling_nullifiers())
-        .count();
+    // let sapling_nullifier_count = block
+    //     .transactions
+    //     .iter()
+    //     .flat_map(|t| t.sapling_nullifiers())
+    //     .count();
 
     tracing::debug!(
         ?hash,
@@ -438,8 +438,8 @@ fn block_precommit_metrics(finalized: &FinalizedBlock) {
         transaction_count,
         transparent_prevout_count,
         transparent_newout_count,
-        sprout_nullifier_count,
-        sapling_nullifier_count,
+        // sprout_nullifier_count,
+        // sapling_nullifier_count,
         "preparing to commit finalized block"
     );
     metrics::counter!(
@@ -454,12 +454,12 @@ fn block_precommit_metrics(finalized: &FinalizedBlock) {
         "state.finalized.cumulative.transparent_newouts",
         transparent_newout_count as u64
     );
-    metrics::counter!(
-        "state.finalized.cumulative.sprout_nullifiers",
-        sprout_nullifier_count as u64
-    );
-    metrics::counter!(
-        "state.finalized.cumulative.sapling_nullifiers",
-        sapling_nullifier_count as u64
-    );
+    // metrics::counter!(
+    //     "state.finalized.cumulative.sprout_nullifiers",
+    //     sprout_nullifier_count as u64
+    // );
+    // metrics::counter!(
+    //     "state.finalized.cumulative.sapling_nullifiers",
+    //     sapling_nullifier_count as u64
+    // );
 }

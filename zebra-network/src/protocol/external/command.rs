@@ -67,7 +67,7 @@ impl Command {
 }
 
 impl BitcoinSerialize for Command {
-    fn bitcoin_serialize<W>(&self, target: &mut W) -> Result<(), std::io::Error>
+    fn bitcoin_serialize<W>(&self, mut target: W) -> Result<(), std::io::Error>
     where
         W: std::io::Write,
     {

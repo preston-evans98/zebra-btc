@@ -6,11 +6,9 @@
 
 use std::io::{Read, Write};
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-
 use zebra_chain::{
     block,
-    serialization::{ReadZcashExt, SerializationError, ZcashDeserialize, ZcashSerialize},
+    serialization::{BitcoinDeserialize, BitcoinSerialize, SerializationError},
     transaction,
 };
 
@@ -54,29 +52,34 @@ impl From<block::Hash> for InventoryHash {
     }
 }
 
-impl ZcashSerialize for InventoryHash {
-    fn zcash_serialize<W: Write>(&self, mut writer: W) -> Result<(), std::io::Error> {
+impl BitcoinSerialize for InventoryHash {
+    fn bitcoin_serialize<W: Write>(&self, mut writer: W) -> Result<(), std::io::Error> {
         let (code, bytes) = match *self {
             InventoryHash::Error => (0, [0; 32]),
             InventoryHash::Tx(hash) => (1, hash.0),
             InventoryHash::Block(hash) => (2, hash.0),
             InventoryHash::FilteredBlock(hash) => (3, hash.0),
         };
-        writer.write_u32::<LittleEndian>(code)?;
-        writer.write_all(&bytes)?;
+        code.bitcoin_serialize(&mut writer)?;
+        bytes.bitcoin_serialize(&mut writer)?;
         Ok(())
     }
 }
 
-impl ZcashDeserialize for InventoryHash {
-    fn zcash_deserialize<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
-        let code = reader.read_u32::<LittleEndian>()?;
-        let bytes = reader.read_32_bytes()?;
+// TODO: Implement segwit
+impl BitcoinDeserialize for InventoryHash {
+    fn bitcoin_deserialize<R: Read>(mut reader: R) -> Result<Self, SerializationError> {
+        // let code = reader.read_u32::<LittleEndian>()?;
+        let code = u32::bitcoin_deserialize(&mut reader)?;
+        let bytes = <[u8; 32]>::bitcoin_deserialize(&mut reader)?;
         match code {
             0 => Ok(InventoryHash::Error),
             1 => Ok(InventoryHash::Tx(transaction::Hash(bytes))),
             2 => Ok(InventoryHash::Block(block::Hash(bytes))),
             3 => Ok(InventoryHash::FilteredBlock(block::Hash(bytes))),
+            // (0x01000000 as u32 & 1) => Ok(InventoryHash::WitnessTx(transaction::Hash(bytes))),
+            // 0x01000000 as u32 & 2 => Ok(InventoryHash::WitnessBlock(block::Hash(bytes))),
+            // 0x01000000 as u32 & 3 => Ok(InventoryHash::WitnessFilteredBlock(block::Hash(bytes))),
             _ => Err(SerializationError::Parse("invalid inventory code")),
         }
     }

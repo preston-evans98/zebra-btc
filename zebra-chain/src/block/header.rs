@@ -148,7 +148,7 @@ impl Header {
         let mut hash_writer = sha256d::Writer::default();
         hash_writer.write_all(&src[..]);
         let hash_bytes = hash_writer.finish();
-        let own_hash = Hash::from_bytes(hash_bytes);
+        let own_hash = Hash::from_bytes_exact(hash_bytes);
 
         // Deserialize the ehader
         let mut src = std::io::Cursor::new(src);

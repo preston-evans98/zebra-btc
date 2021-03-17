@@ -172,7 +172,7 @@ fn difficulty_threshold_is_valid(
 mod tests {
     use std::sync::Arc;
 
-    use zebra_chain::serialization::ZcashDeserializeInto;
+    use zebra_chain::serialization::BitcoinDeserializeInto;
 
     use super::*;
 
@@ -181,7 +181,7 @@ mod tests {
         zebra_test::init();
 
         let height = zebra_test::vectors::BLOCK_MAINNET_347499_BYTES
-            .zcash_deserialize_into::<Arc<Block>>()
+            .bitcoin_deserialize_into::<Arc<Block>>()
             .unwrap()
             .coinbase_height()
             .unwrap();
@@ -200,7 +200,7 @@ mod tests {
         zebra_test::init();
 
         let height = zebra_test::vectors::BLOCK_MAINNET_347499_BYTES
-            .zcash_deserialize_into::<Arc<Block>>()
+            .bitcoin_deserialize_into::<Arc<Block>>()
             .unwrap()
             .coinbase_height()
             .unwrap();

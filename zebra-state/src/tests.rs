@@ -3,6 +3,7 @@ use std::{convert::TryFrom, mem, sync::Arc};
 use primitive_types::U256;
 use zebra_chain::{
     block::{self, Block},
+    cached::Cached,
     transaction::Transaction,
     transparent,
     work::difficulty::ExpandedDifficulty,
@@ -48,16 +49,28 @@ impl FakeChainHelper for Arc<Block> {
         let mut transactions = mem::take(&mut child.transactions);
         let mut tx = transactions.remove(0);
 
-        let input = match Arc::make_mut(&mut tx) {
-            Transaction::V1 { inputs, .. } => &mut inputs[0],
-            Transaction::V2 { inputs, .. } => &mut inputs[0],
-            Transaction::V3 { inputs, .. } => &mut inputs[0],
-            Transaction::V4 { inputs, .. } => &mut inputs[0],
-        };
+        let input = &Arc::make_mut(&mut tx).inputs[0];
+        // let input = match Arc::make_mut(&mut tx) {
+        //     Transaction::V1 { inputs, .. } => &mut inputs[0],
+        //     Transaction::V2 { inputs, .. } => &mut inputs[0],
+        //     Transaction::V3 { inputs, .. } => &mut inputs[0],
+        //     Transaction::V4 { inputs, .. } => &mut inputs[0],
+        // };
 
         match input {
-            transparent::Input::Coinbase { height, .. } => height.0 += 1,
-            _ => panic!("block must have a coinbase height to create a child"),
+            transparent::Input::Coinbase { mut height, .. } => match height {
+                Some(ref mut height) => {
+                    let new_height: u32 = height
+                        .mut_value()
+                        .expect("block must have a coinbase height to create a child")
+                        .0
+                        + 1;
+                    let mut new_cached_height = Cached::from(block::Height(new_height));
+                    std::mem::swap(height, &mut new_cached_height);
+                }
+                _ => panic!("block must have a coinbase height to create a child"),
+            },
+            _ => panic!("block must have a coinbase tx to create a child"),
         }
 
         child.transactions.push(tx);

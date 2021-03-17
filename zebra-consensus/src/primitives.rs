@@ -1,7 +1,7 @@
 //! Asynchronous verification of cryptographic primitives.
 
-pub mod groth16;
-pub mod redjubjub;
+// pub mod groth16;
+// pub mod redjubjub;
 
 /// The maximum batch size for any of the batch verifiers.
 const MAX_BATCH_SIZE: usize = 64;

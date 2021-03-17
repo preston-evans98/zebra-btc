@@ -2,6 +2,7 @@
 
 use crate::constants::magics;
 
+use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
 use std::fmt;
 
 use zebra_chain::{
@@ -10,6 +11,7 @@ use zebra_chain::{
         Network::{self, *},
         NetworkUpgrade::{self, *},
     },
+    serialization::{BitcoinDeserialize, BitcoinSerialize, SerializationError},
 };
 
 #[cfg(test)]
@@ -37,7 +39,7 @@ impl From<Network> for Magic {
 }
 
 /// A protocol version number.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, BtcSerialize, BtcDeserialize)]
 pub struct ProtocolVersion(pub u32);
 
 impl ProtocolVersion {
@@ -75,7 +77,7 @@ bitflags! {
     ///
     /// Note that bits 24-31 are reserved for temporary experiments; other
     /// service bits should be allocated via the ZIP process.
-    #[derive(Default)]
+    #[derive(Default, BtcSerialize, BtcDeserialize)]
     pub struct PeerServices: u64 {
         /// NODE_NETWORK means that the node is a full node capable of serving
         /// blocks, as opposed to a light client that makes network requests but
@@ -85,7 +87,7 @@ bitflags! {
 }
 
 /// A nonce used in the networking layer to identify messages.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, BtcSerialize, BtcDeserialize)]
 pub struct Nonce(pub u64);
 
 impl Default for Nonce {

@@ -13,7 +13,7 @@ use tower::{Service, ServiceBuilder, ServiceExt};
 use tracing_futures::Instrument;
 
 use zebra_chain::parameters::Network::*;
-use zebra_chain::serialization::ZcashDeserialize;
+use zebra_chain::serialization::BitcoinDeserialize;
 
 /// The timeout we apply to each verify future during testing.
 ///
@@ -35,7 +35,7 @@ async fn single_item_checkpoint_list() -> Result<(), Report> {
     zebra_test::init();
 
     let block0 =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])?;
+        Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])?;
     let hash0 = block0.hash();
 
     // Make a checkpoint list containing only the genesis block
@@ -118,7 +118,7 @@ async fn multi_item_checkpoint_list() -> Result<(), Report> {
         &zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..],
         &zebra_test::vectors::BLOCK_MAINNET_1_BYTES[..],
     ] {
-        let block = Arc::<Block>::zcash_deserialize(*b)?;
+        let block = Arc::<Block>::bitcoin_deserialize(*b)?;
         let hash = block.hash();
         checkpoint_data.push((block.clone(), block.coinbase_height().unwrap(), hash));
     }
@@ -246,7 +246,7 @@ async fn continuous_blockchain(restart_height: Option<block::Height>) -> Result<
         &zebra_test::vectors::BLOCK_MAINNET_9_BYTES[..],
         &zebra_test::vectors::BLOCK_MAINNET_10_BYTES[..],
     ] {
-        let block = Arc::<Block>::zcash_deserialize(*b)?;
+        let block = Arc::<Block>::bitcoin_deserialize(*b)?;
         let hash = block.hash();
         blockchain.push((block.clone(), block.coinbase_height().unwrap(), hash));
     }
@@ -258,7 +258,7 @@ async fn continuous_blockchain(restart_height: Option<block::Height>) -> Result<
         &zebra_test::vectors::BLOCK_MAINNET_5_BYTES[..],
         &zebra_test::vectors::BLOCK_MAINNET_9_BYTES[..],
     ] {
-        let block = Arc::<Block>::zcash_deserialize(*b)?;
+        let block = Arc::<Block>::bitcoin_deserialize(*b)?;
         let hash = block.hash();
         checkpoints.push((block.clone(), block.coinbase_height().unwrap(), hash));
     }
@@ -399,9 +399,9 @@ async fn block_higher_than_max_checkpoint_fail() -> Result<(), Report> {
     zebra_test::init();
 
     let block0 =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])?;
+        Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])?;
     let block415000 =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_415000_BYTES[..])?;
+        Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_415000_BYTES[..])?;
 
     // Make a checkpoint list containing only the genesis block
     let genesis_checkpoint_list: BTreeMap<block::Height, block::Hash> =
@@ -474,7 +474,7 @@ async fn wrong_checkpoint_hash_fail() -> Result<(), Report> {
     zebra_test::init();
 
     let good_block0 =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])?;
+        Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])?;
     let good_block0_hash = good_block0.hash();
     // Change the header hash
     let mut bad_block0 = good_block0.clone();
@@ -662,7 +662,7 @@ async fn checkpoint_drop_cancel() -> Result<(), Report> {
         &zebra_test::vectors::BLOCK_MAINNET_415000_BYTES[..],
         &zebra_test::vectors::BLOCK_MAINNET_434873_BYTES[..],
     ] {
-        let block = Arc::<Block>::zcash_deserialize(*b)?;
+        let block = Arc::<Block>::bitcoin_deserialize(*b)?;
         let hash = block.hash();
         checkpoint_data.push((block.clone(), block.coinbase_height().unwrap(), hash));
     }
@@ -758,7 +758,7 @@ async fn hard_coded_mainnet() -> Result<(), Report> {
     zebra_test::init();
 
     let block0 =
-        Arc::<Block>::zcash_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])?;
+        Arc::<Block>::bitcoin_deserialize(&zebra_test::vectors::BLOCK_MAINNET_GENESIS_BYTES[..])?;
     let hash0 = block0.hash();
 
     let state_service = ServiceBuilder::new()

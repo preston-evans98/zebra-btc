@@ -264,7 +264,7 @@ impl NonFinalizedState {
 
 #[cfg(test)]
 mod tests {
-    use zebra_chain::serialization::ZcashDeserializeInto;
+    use zebra_chain::serialization::BitcoinDeserializeInto;
     use zebra_test::prelude::*;
 
     use crate::tests::{FakeChainHelper, Prepare};
@@ -277,7 +277,7 @@ mod tests {
         zebra_test::init();
 
         let block1: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.bitcoin_deserialize_into()?;
         let block2 = block1.make_fake_child().set_work(10);
         let child = block1.make_fake_child().set_work(1);
 
@@ -298,7 +298,7 @@ mod tests {
         zebra_test::init();
 
         let block1: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.bitcoin_deserialize_into()?;
         let block2 = block1.make_fake_child().set_work(10);
         let child = block1.make_fake_child().set_work(1);
 
@@ -324,7 +324,7 @@ mod tests {
         zebra_test::init();
 
         let block1: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.bitcoin_deserialize_into()?;
         let block2 = block1.make_fake_child().set_work(10);
         let child1 = block1.make_fake_child().set_work(1);
         let child2 = block2.make_fake_child().set_work(1);
@@ -348,7 +348,7 @@ mod tests {
         zebra_test::init();
 
         let block1: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.bitcoin_deserialize_into()?;
 
         let long_chain_block1 = block1.make_fake_child().set_work(1);
         let long_chain_block2 = long_chain_block1.make_fake_child().set_work(1);
@@ -372,7 +372,7 @@ mod tests {
         zebra_test::init();
 
         let block1: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.bitcoin_deserialize_into()?;
 
         let long_chain_block1 = block1.make_fake_child().set_work(1);
         let long_chain_block2 = long_chain_block1.make_fake_child().set_work(1);
@@ -400,7 +400,7 @@ mod tests {
         zebra_test::init();
 
         let block1: Arc<Block> =
-            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.zcash_deserialize_into()?;
+            zebra_test::vectors::BLOCK_MAINNET_419200_BYTES.bitcoin_deserialize_into()?;
 
         let less_work_child = block1.make_fake_child().set_work(1);
         let more_work_child = block1.make_fake_child().set_work(3);

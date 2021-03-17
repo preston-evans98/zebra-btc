@@ -25,7 +25,7 @@ pub fn new_outputs(block: &block::Block) -> std::collections::HashMap<transparen
     for transaction in &block.transactions {
         let hash = transaction.hash();
         let from_coinbase = transaction.is_coinbase();
-        for (index, output) in transaction.outputs().iter().cloned().enumerate() {
+        for (index, output) in transaction.outputs.iter().cloned().enumerate() {
             let index = index as u32;
             new_outputs.insert(
                 transparent::OutPoint { hash, index },

@@ -1,4 +1,5 @@
-use crate::serialization::SerializationError;
+use crate::serialization::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
+use bitcoin_serde_derive::BtcSerialize;
 
 use std::{
     convert::TryFrom,
@@ -14,8 +15,24 @@ use std::{
 /// # Invariants
 ///
 /// Users should not construct block heights greater than `Height::MAX`.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize, BtcSerialize,
+)]
 pub struct Height(pub u32);
+
+impl BitcoinDeserialize for Height {
+    fn bitcoin_deserialize<R: std::io::Read>(mut reader: R) -> Result<Self, SerializationError>
+    where
+        Self: Sized,
+    {
+        let inner = u32::bitcoin_deserialize(&mut reader)?;
+        if Height(inner) <= Height::MAX {
+            Ok(Height(inner))
+        } else {
+            Err(SerializationError::Parse("Height exceeds maximum height"))
+        }
+    }
+}
 
 impl std::str::FromStr for Height {
     type Err = SerializationError;

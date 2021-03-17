@@ -15,7 +15,7 @@ use zcash_script::{
     zcash_script_error_t_zcash_script_ERR_TX_SIZE_MISMATCH,
 };
 use zebra_chain::{
-    parameters::ConsensusBranchId, serialization::ZcashSerialize, transaction::Transaction,
+    parameters::ConsensusBranchId, serialization::BitcoinSerialize, transaction::Transaction,
     transparent,
 };
 
@@ -65,7 +65,7 @@ impl CachedFfiTransaction {
     /// Construct a `PrecomputedTransaction` from a `Transaction`.
     pub fn new(transaction: Arc<Transaction>) -> Self {
         let tx_to = transaction
-            .zcash_serialize_to_vec()
+            .bitcoin_serialize_to_vec()
             .expect("serialization into a vec is infallible");
 
         let tx_to_ptr = tx_to.as_ptr();
@@ -83,7 +83,7 @@ impl CachedFfiTransaction {
     }
 
     pub fn inputs(&self) -> &[transparent::Input] {
-        self.transaction.inputs()
+        &self.transaction.inputs
     }
 
     /// Verify a script within a transaction given the corresponding
@@ -114,6 +114,11 @@ impl CachedFfiTransaction {
 
         let mut err = 0;
 
+        #[cfg(windows)]
+        let flags = flags
+            .try_into()
+            .expect("zcash_script_SCRIPT_FLAGS_VERIFY_* enum values fit in a c_uint");
+
         let ret = unsafe {
             zcash_script::zcash_script_verify_precomputed(
                 self.precomputed,
@@ -121,12 +126,7 @@ impl CachedFfiTransaction {
                 script_ptr,
                 script_len as u32,
                 amount,
-                #[cfg(not(windows))]
                 flags,
-                #[cfg(windows)]
-                flags
-                    .try_into()
-                    .expect("zcash_script_SCRIPT_FLAGS_VERIFY_* enum values fit in a c_uint"),
                 consensus_branch_id,
                 &mut err,
             )
@@ -180,7 +180,7 @@ mod tests {
     use std::convert::TryInto;
     use std::sync::Arc;
     use zebra_chain::{
-        parameters::NetworkUpgrade::*, serialization::ZcashDeserializeInto, transparent,
+        parameters::NetworkUpgrade::*, serialization::BitcoinDeserializeInto, transparent,
     };
     use zebra_test::prelude::*;
 
@@ -196,7 +196,7 @@ mod tests {
         zebra_test::init();
 
         let transaction =
-            SCRIPT_TX.zcash_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
+            SCRIPT_TX.bitcoin_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
         let coin = u64::pow(10, 8);
         let amount = 212 * coin;
         let output = transparent::Output {
@@ -219,7 +219,7 @@ mod tests {
         zebra_test::init();
 
         let transaction =
-            SCRIPT_TX.zcash_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
+            SCRIPT_TX.bitcoin_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
         let coin = u64::pow(10, 8);
         let amount = 211 * coin;
         let output = transparent::Output {
@@ -245,7 +245,7 @@ mod tests {
 
         let coin = u64::pow(10, 8);
         let transaction =
-            SCRIPT_TX.zcash_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
+            SCRIPT_TX.bitcoin_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
 
         let verifier = super::CachedFfiTransaction::new(transaction);
 
@@ -277,7 +277,7 @@ mod tests {
 
         let coin = u64::pow(10, 8);
         let transaction =
-            SCRIPT_TX.zcash_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
+            SCRIPT_TX.bitcoin_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
 
         let verifier = super::CachedFfiTransaction::new(transaction);
 
@@ -311,7 +311,7 @@ mod tests {
 
         let coin = u64::pow(10, 8);
         let transaction =
-            SCRIPT_TX.zcash_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
+            SCRIPT_TX.bitcoin_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
 
         let verifier = super::CachedFfiTransaction::new(transaction);
 
@@ -345,7 +345,7 @@ mod tests {
 
         let coin = u64::pow(10, 8);
         let transaction =
-            SCRIPT_TX.zcash_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
+            SCRIPT_TX.bitcoin_deserialize_into::<Arc<zebra_chain::transaction::Transaction>>()?;
 
         let verifier = super::CachedFfiTransaction::new(transaction);
 
