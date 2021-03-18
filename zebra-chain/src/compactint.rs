@@ -3,7 +3,7 @@ use crate::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
 use byteorder::{LittleEndian, WriteBytesExt};
 // use bytes::Buf;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CompactInt(u64);
 
 impl CompactInt {

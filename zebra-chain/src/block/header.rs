@@ -4,7 +4,10 @@ use bytes::Buf;
 use chrono::{DateTime, Duration, Utc};
 use thiserror::Error;
 
-use crate::{serialization::sha256d, BitcoinDeserialize, BitcoinSerialize, SerializationError};
+use crate::{
+    compactint::CompactInt, serialization::sha256d, BitcoinDeserialize, BitcoinSerialize,
+    SerializationError,
+};
 use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
 
 use crate::{cached::Cached, work::difficulty::CompactDifficulty};
@@ -172,4 +175,23 @@ impl Header {
 pub struct CountedHeader {
     pub header: Header,
     pub transaction_count: usize,
+}
+
+impl BitcoinDeserialize for CountedHeader {
+    fn bitcoin_deserialize<R: std::io::Read>(mut reader: R) -> Result<Self, SerializationError>
+    where
+        Self: Sized,
+    {
+        Ok(CountedHeader {
+            header: Header::bitcoin_deserialize(&mut reader)?,
+            transaction_count: CompactInt::bitcoin_deserialize(&mut reader)?.value() as usize,
+        })
+    }
+}
+impl BitcoinSerialize for CountedHeader {
+    fn bitcoin_serialize<W: Write>(&self, mut target: W) -> Result<(), std::io::Error> {
+        self.header.bitcoin_serialize(&mut target)?;
+        CompactInt::from(self.transaction_count).bitcoin_serialize(&mut target)?;
+        Ok(())
+    }
 }

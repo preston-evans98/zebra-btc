@@ -1,15 +1,18 @@
 //! A Tokio codec mapping byte streams to Bitcoin message streams.
 
-use std::io::{Cursor, Read, Write};
 use std::{fmt, net::SocketAddr};
+use std::{
+    io::{Cursor, Read, Write},
+    sync::Arc,
+};
 
+use crate::meta_addr::MetaAddr;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use bytes::BytesMut;
-use chrono::{TimeZone, Utc};
 use tokio_util::codec::{Decoder, Encoder};
 
 use zebra_chain::{
-    block::{self, Block},
+    block,
     parameters::Network,
     serialization::{sha256d, BitcoinDeserialize, BitcoinSerialize, SerializationError as Error},
     transaction::Transaction,
@@ -18,7 +21,12 @@ use zebra_chain::{
 use crate::constants;
 
 use super::{
-    message::{Message, RejectReason, Version},
+    command::Command,
+    inv::InventoryHash,
+    message::{
+        BlockTxn, CompactBlock, GetBlockTxn, GetBlocks, GetHeaders, MerkleBlock, Message,
+        RejectReason, SendCompact, Version,
+    },
     types::*,
 };
 
@@ -122,33 +130,8 @@ impl Encoder<Message> for Codec {
             metrics::counter!("bytes.written", (body.len() + HEADER_LEN) as u64, "addr" =>  label);
         }
 
-        use Message::*;
-        // Note: because all match arms must have
-        // the same type, and the array length is
-        // part of the type, having at least one
-        // of length 12 checks that they are all
-        // of length 12, as they must be &[u8; 12].
-        let command = match item {
-            Version { .. } => b"version\0\0\0\0\0",
-            Verack { .. } => b"verack\0\0\0\0\0\0",
-            Ping { .. } => b"ping\0\0\0\0\0\0\0\0",
-            Pong { .. } => b"pong\0\0\0\0\0\0\0\0",
-            Reject { .. } => b"reject\0\0\0\0\0\0",
-            Addr { .. } => b"addr\0\0\0\0\0\0\0\0",
-            GetAddr { .. } => b"getaddr\0\0\0\0\0",
-            Block { .. } => b"block\0\0\0\0\0\0\0",
-            GetBlocks { .. } => b"getblocks\0\0\0",
-            Headers { .. } => b"headers\0\0\0\0\0",
-            GetHeaders { .. } => b"getheaders\0\0",
-            Inv { .. } => b"inv\0\0\0\0\0\0\0\0\0",
-            GetData { .. } => b"getdata\0\0\0\0\0",
-            NotFound { .. } => b"notfound\0\0\0\0",
-            Tx { .. } => b"tx\0\0\0\0\0\0\0\0\0\0",
-            Mempool { .. } => b"mempool\0\0\0\0\0",
-            FilterLoad { .. } => b"filterload\0\0",
-            FilterAdd { .. } => b"filteradd\0\0\0",
-            FilterClear { .. } => b"filterclear\0",
-        };
+        let command = item.command();
+        let command = command.bytes();
         trace!(?item, len = body.len());
 
         // XXX this should write directly into the buffer,
@@ -176,29 +159,13 @@ impl Codec {
         match msg {
             Message::Version(inner) => {
                 inner.bitcoin_serialize(&mut writer)?;
-                // writer.write_u32::<LittleEndian>(version.0)?;
-                // writer.write_u64::<LittleEndian>(services.bits())?;
-                // writer.write_i64::<LittleEndian>(timestamp.timestamp())?;
-
-                // let (recv_services, recv_addr) = address_recv;
-                // writer.write_u64::<LittleEndian>(recv_services.bits())?;
-                // writer.write_socket_addr(*recv_addr)?;
-
-                // let (from_services, from_addr) = address_from;
-                // writer.write_u64::<LittleEndian>(from_services.bits())?;
-                // writer.write_socket_addr(*from_addr)?;
-
-                // writer.write_u64::<LittleEndian>(nonce.0)?;
-                // writer.write_string(&user_agent)?;
-                // writer.write_u32::<LittleEndian>(start_height.0)?;
-                // writer.write_u8(*relay as u8)?;
             }
             Message::Verack => { /* Empty payload -- no-op */ }
             Message::Ping(nonce) => {
-                writer.write_u64::<LittleEndian>(nonce.0)?;
+                nonce.bitcoin_serialize(&mut writer)?;
             }
             Message::Pong(nonce) => {
-                writer.write_u64::<LittleEndian>(nonce.0)?;
+                nonce.bitcoin_serialize(&mut writer)?;
             }
             Message::Reject {
                 message,
@@ -206,31 +173,28 @@ impl Codec {
                 reason,
                 data,
             } => {
-                writer.write_string(&message)?;
+                // todo!()
+                message.bitcoin_serialize(&mut writer)?;
                 writer.write_u8(*ccode as u8)?;
-                writer.write_string(&reason)?;
+                message.bitcoin_serialize(&mut writer)?;
                 writer.write_all(&data.unwrap())?;
             }
-            Message::Addr(addrs) => addrs.zcash_serialize(&mut writer)?,
+            Message::Addr(addrs) => addrs.bitcoin_serialize(&mut writer)?,
             Message::GetAddr => { /* Empty payload -- no-op */ }
-            Message::Block(block) => block.zcash_serialize(&mut writer)?,
-            Message::GetBlocks { known_blocks, stop } => {
-                writer.write_u32::<LittleEndian>(self.builder.version.0)?;
-                known_blocks.zcash_serialize(&mut writer)?;
-                stop.unwrap_or(block::Hash([0; 32]))
-                    .zcash_serialize(&mut writer)?;
+            Message::Block(block) => block.bitcoin_serialize(&mut writer)?,
+            Message::GetBlocks(get_blocks) => {
+                self.builder.version.bitcoin_serialize(&mut writer)?;
+                get_blocks.bitcoin_serialize(&mut writer)?
             }
-            Message::GetHeaders { known_blocks, stop } => {
-                writer.write_u32::<LittleEndian>(self.builder.version.0)?;
-                known_blocks.zcash_serialize(&mut writer)?;
-                stop.unwrap_or(block::Hash([0; 32]))
-                    .zcash_serialize(&mut writer)?;
+            Message::GetHeaders(get_headers) => {
+                self.builder.version.bitcoin_serialize(&mut writer)?;
+                get_headers.bitcoin_serialize(&mut writer)?
             }
-            Message::Headers(headers) => headers.zcash_serialize(&mut writer)?,
-            Message::Inv(hashes) => hashes.zcash_serialize(&mut writer)?,
-            Message::GetData(hashes) => hashes.zcash_serialize(&mut writer)?,
-            Message::NotFound(hashes) => hashes.zcash_serialize(&mut writer)?,
-            Message::Tx(transaction) => transaction.zcash_serialize(&mut writer)?,
+            Message::Headers(headers) => headers.bitcoin_serialize(&mut writer)?,
+            Message::Inv(hashes) => hashes.bitcoin_serialize(&mut writer)?,
+            Message::GetData(hashes) => hashes.bitcoin_serialize(&mut writer)?,
+            Message::NotFound(hashes) => hashes.bitcoin_serialize(&mut writer)?,
+            Message::Tx(transaction) => transaction.bitcoin_serialize(&mut writer)?,
             Message::Mempool => { /* Empty payload -- no-op */ }
             Message::FilterLoad {
                 filter,
@@ -243,10 +207,15 @@ impl Codec {
                 writer.write_u32::<LittleEndian>(tweak.0)?;
                 writer.write_u8(*flags)?;
             }
-            Message::FilterAdd { data } => {
-                writer.write_all(data)?;
-            }
+            Message::FilterAdd { data } => writer.write_all(data)?,
             Message::FilterClear => { /* Empty payload -- no-op */ }
+            Message::MerkleBlock(inner) => inner.bitcoin_serialize(&mut writer)?,
+            Message::CompactBlock(inner) => inner.bitcoin_serialize(&mut writer)?,
+            Message::GetBlockTxn(inner) => inner.bitcoin_serialize(&mut writer)?,
+            Message::BlockTxn(inner) => inner.bitcoin_serialize(&mut writer)?,
+            Message::SendCompact(inner) => inner.bitcoin_serialize(&mut writer)?,
+            Message::FeeFilter(inner) => inner.bitcoin_serialize(&mut writer)?,
+            Message::SendHeaders => { /* Empty payload -- no-op */ }
         }
         Ok(())
     }
@@ -258,7 +227,7 @@ enum DecodeState {
     Head,
     Body {
         body_len: usize,
-        command: [u8; 12],
+        command: Command,
         checksum: sha256d::Checksum,
     },
 }
@@ -274,7 +243,7 @@ impl fmt::Debug for DecodeState {
             } => f
                 .debug_struct("DecodeState::Body")
                 .field("body_len", &body_len)
-                .field("command", &String::from_utf8_lossy(command))
+                .field("command", &command)
                 .field("checksum", &checksum)
                 .finish(),
         }
@@ -301,19 +270,21 @@ impl Decoder for Codec {
 
                 // Create a cursor over the header and parse its fields.
                 let mut header_reader = Cursor::new(&header);
-                let magic = Magic(header_reader.read_4_bytes()?);
-                let command = header_reader.read_12_bytes()?;
+                let magic = Magic(<[u8; 4]>::bitcoin_deserialize(&mut header_reader)?);
+                let command = Command::bitcoin_deserialize(&mut header_reader)?;
                 let body_len = header_reader.read_u32::<LittleEndian>()? as usize;
-                let checksum = sha256d::Checksum(header_reader.read_4_bytes()?);
+                let checksum =
+                    sha256d::Checksum(<[u8; 4]>::bitcoin_deserialize(&mut header_reader)?);
                 trace!(
                     ?self.state,
                     ?magic,
-                    command = %String::from_utf8(
-                        command.iter()
-                            .cloned()
-                            .flat_map(std::ascii::escape_default)
-                            .collect()
-                    ).unwrap(),
+                    command = ?command,
+                    // command = %String::from_utf8(
+                    //     command.iter()
+                    //         .cloned()
+                    //         .flat_map(std::ascii::escape_default)
+                    //         .collect()
+                    // ).unwrap(),
                     body_len,
                     ?checksum,
                     "read header from src buffer"
@@ -365,80 +336,83 @@ impl Decoder for Codec {
                     ));
                 }
 
-                let body_reader = Cursor::new(&body);
-                match &command {
-                    b"version\0\0\0\0\0" => self.read_version(body_reader),
-                    b"verack\0\0\0\0\0\0" => self.read_verack(body_reader),
-                    b"ping\0\0\0\0\0\0\0\0" => self.read_ping(body_reader),
-                    b"pong\0\0\0\0\0\0\0\0" => self.read_pong(body_reader),
-                    b"reject\0\0\0\0\0\0" => self.read_reject(body_reader),
-                    b"addr\0\0\0\0\0\0\0\0" => self.read_addr(body_reader),
-                    b"getaddr\0\0\0\0\0" => self.read_getaddr(body_reader),
-                    b"block\0\0\0\0\0\0\0" => self.read_block(body_reader),
-                    b"getblocks\0\0\0" => self.read_getblocks(body_reader),
-                    b"headers\0\0\0\0\0" => self.read_headers(body_reader),
-                    b"getheaders\0\0" => self.read_getheaders(body_reader),
-                    b"inv\0\0\0\0\0\0\0\0\0" => self.read_inv(body_reader),
-                    b"getdata\0\0\0\0\0" => self.read_getdata(body_reader),
-                    b"notfound\0\0\0\0" => self.read_notfound(body_reader),
-                    b"tx\0\0\0\0\0\0\0\0\0\0" => self.read_tx(body_reader),
-                    b"mempool\0\0\0\0\0" => self.read_mempool(body_reader),
-                    b"filterload\0\0" => self.read_filterload(body_reader, body_len),
-                    b"filteradd\0\0\0" => self.read_filteradd(body_reader),
-                    b"filterclear\0" => self.read_filterclear(body_reader),
-                    _ => return Err(Parse("unknown command")),
-                }
-                // We need Ok(Some(msg)) to signal that we're done decoding.
-                // This is also convenient for tracing the parse result.
-                .map(|msg| {
-                    trace!("finished message decoding");
-                    Some(msg)
-                })
+                let mut body_reader = Cursor::new(&body);
+                // Convention: deserialize the message directly (using `bitcoin_deserialize()`) unless
+                // it requires context from the codec. In that case, use the codec's self.read_* method.
+                let msg = match command {
+                    Command::Addr => {
+                        Message::Addr(Vec::<MetaAddr>::bitcoin_deserialize(&mut body_reader)?)
+                    }
+                    Command::Version => {
+                        Message::Version(Version::bitcoin_deserialize(&mut body_reader)?)
+                    }
+                    Command::Verack => Message::Verack,
+                    Command::GetBlocks => self.read_getblocks(&mut body_reader)?,
+                    Command::GetData => Message::GetData(
+                        <Vec<InventoryHash>>::bitcoin_deserialize(&mut body_reader)?,
+                    ),
+                    Command::Block => {
+                        Message::Block(<Arc<block::Block>>::bitcoin_deserialize(&mut body_reader)?)
+                    }
+
+                    Command::GetHeaders => self.read_getheaders(&mut body_reader)?,
+                    Command::Headers => Message::Headers(
+                        <Vec<block::CountedHeader>>::bitcoin_deserialize(&mut body_reader)?,
+                    ),
+                    Command::Inv => {
+                        Message::Inv(<Vec<InventoryHash>>::bitcoin_deserialize(&mut body_reader)?)
+                    }
+                    Command::MemPool => Message::Mempool,
+                    Command::MerkleBlock => {
+                        Message::MerkleBlock(MerkleBlock::bitcoin_deserialize(&mut body_reader)?)
+                    }
+                    Command::CmpctBlock => {
+                        Message::CompactBlock(CompactBlock::bitcoin_deserialize(&mut body_reader)?)
+                    }
+                    Command::GetBlockTxn => {
+                        Message::GetBlockTxn(GetBlockTxn::bitcoin_deserialize(&mut body_reader)?)
+                    }
+                    Command::BlockTxn => {
+                        Message::BlockTxn(BlockTxn::bitcoin_deserialize(&mut body_reader)?)
+                    }
+                    Command::SendCmpct => {
+                        Message::SendCompact(SendCompact::bitcoin_deserialize(&mut body_reader)?)
+                    }
+                    Command::NotFound => Message::NotFound(
+                        <Vec<InventoryHash>>::bitcoin_deserialize(&mut body_reader)?,
+                    ),
+                    Command::Tx => {
+                        Message::Tx(<Arc<Transaction>>::bitcoin_deserialize(&mut body_reader)?)
+                    }
+                    Command::Alert => {
+                        // TODO: Verify that no additional cleanup is required.
+                        self.state = DecodeState::Head;
+                        debug!("Received Alert message! Alert is insecure and deprecated");
+                        return Ok(None);
+                    }
+                    Command::FeeFilter => {
+                        Message::FeeFilter(u64::bitcoin_deserialize(&mut body_reader)?)
+                    }
+                    Command::FilterAdd => self.read_filteradd(&mut body_reader)?,
+                    Command::FilterClear => Message::FilterClear,
+                    Command::FilterLoad => self.read_filterload(&mut body_reader, body_len)?,
+                    Command::GetAddr => Message::GetAddr,
+                    Command::Ping => Message::Ping(Nonce::bitcoin_deserialize(&mut body_reader)?),
+                    Command::Pong => Message::Pong(Nonce::bitcoin_deserialize(&mut body_reader)?),
+                    Command::Reject => self.read_reject(&mut body_reader)?,
+                    Command::SendHeaders => Message::SendHeaders,
+                };
+                trace!("finished message decoding");
+                Ok(Some(msg))
             }
         }
     }
 }
 
 impl Codec {
-    fn read_version<R: Read>(&self, mut reader: R) -> Result<Message, Error> {
-        Ok(Message::Version(Version::bitcoin_deserialize(&mut reader)?))
-        // version: ProtocolVersion(reader.read_u32::<LittleEndian>()?),
-        // // Use from_bits_truncate to discard unknown service bits.
-        // services: PeerServices::from_bits_truncate(reader.read_u64::<LittleEndian>()?),
-        // timestamp: Utc.timestamp(reader.read_i64::<LittleEndian>()?, 0),
-        // address_recv: (
-        //     PeerServices::from_bits_truncate(reader.read_u64::<LittleEndian>()?),
-        //     reader.read_socket_addr()?,
-        // ),
-        // address_from: (
-        //     PeerServices::from_bits_truncate(reader.read_u64::<LittleEndian>()?),
-        //     reader.read_socket_addr()?,
-        // ),
-        // nonce: Nonce(reader.read_u64::<LittleEndian>()?),
-        // user_agent: reader.read_string()?,
-        // start_height: block::Height(reader.read_u32::<LittleEndian>()?),
-        // relay: match reader.read_u8()? {
-        //     0 => false,
-        //     1 => true,
-        //     _ => return Err(Error::Parse("non-bool value supplied in relay field")),
-        // },
-    }
-
-    fn read_verack<R: Read>(&self, mut _reader: R) -> Result<Message, Error> {
-        Ok(Message::Verack)
-    }
-
-    fn read_ping<R: Read>(&self, mut reader: R) -> Result<Message, Error> {
-        Ok(Message::Ping(Nonce(reader.read_u64::<LittleEndian>()?)))
-    }
-
-    fn read_pong<R: Read>(&self, mut reader: R) -> Result<Message, Error> {
-        Ok(Message::Pong(Nonce(reader.read_u64::<LittleEndian>()?)))
-    }
-
     fn read_reject<R: Read>(&self, mut reader: R) -> Result<Message, Error> {
         Ok(Message::Reject {
-            message: reader.read_string()?,
+            message: String::bitcoin_deserialize(&mut reader)?,
             ccode: match reader.read_u8()? {
                 0x01 => RejectReason::Malformed,
                 0x10 => RejectReason::Invalid,
@@ -451,7 +425,7 @@ impl Codec {
                 0x50 => RejectReason::Other,
                 _ => return Err(Error::Parse("invalid RejectReason value in ccode field")),
             },
-            reason: reader.read_string()?,
+            reason: String::bitcoin_deserialize(&mut reader)?,
             // Sometimes there's data, sometimes there isn't. There's no length
             // field, this is just implicitly encoded by the body_len.
             // Apparently all existing implementations only supply 32 bytes of
@@ -459,79 +433,28 @@ impl Codec {
             // the Reject message that way), so instead of passing in the
             // body_len separately and calculating remaining bytes, just try to
             // read 32 bytes and ignore any failures.
-            data: reader.read_32_bytes().ok(),
+            data: <[u8; 32]>::bitcoin_deserialize(&mut reader).ok(),
         })
     }
 
-    fn read_addr<R: Read>(&self, reader: R) -> Result<Message, Error> {
-        Ok(Message::Addr(Vec::zcash_deserialize(reader)?))
-    }
-
-    fn read_getaddr<R: Read>(&self, mut _reader: R) -> Result<Message, Error> {
-        Ok(Message::GetAddr)
-    }
-
-    fn read_block<R: Read>(&self, reader: R) -> Result<Message, Error> {
-        Ok(Message::Block(Block::zcash_deserialize(reader)?.into()))
-    }
-
     fn read_getblocks<R: Read>(&self, mut reader: R) -> Result<Message, Error> {
-        if self.builder.version == ProtocolVersion(reader.read_u32::<LittleEndian>()?) {
-            let known_blocks = Vec::zcash_deserialize(&mut reader)?;
-            let stop_hash = block::Hash::zcash_deserialize(&mut reader)?;
-            let stop = if stop_hash != block::Hash([0; 32]) {
-                Some(stop_hash)
-            } else {
-                None
-            };
-            Ok(Message::GetBlocks { known_blocks, stop })
+        let received_version = ProtocolVersion::bitcoin_deserialize(&mut reader)?;
+        let get_blocks = GetBlocks::bitcoin_deserialize(&mut reader)?;
+        if self.builder.version == received_version {
+            Ok(Message::GetBlocks(get_blocks))
         } else {
             Err(Error::Parse("getblocks version did not match negotiation"))
         }
-    }
-
-    /// Deserialize a `headers` message.
-    ///
-    /// See [Zcash block header] for the enumeration of these fields.
-    ///
-    /// [Zcash block header](https://zips.z.cash/protocol/protocol.pdf#page=84)
-    fn read_headers<R: Read>(&self, mut reader: R) -> Result<Message, Error> {
-        Ok(Message::Headers(Vec::zcash_deserialize(&mut reader)?))
     }
 
     fn read_getheaders<R: Read>(&self, mut reader: R) -> Result<Message, Error> {
-        if self.builder.version == ProtocolVersion(reader.read_u32::<LittleEndian>()?) {
-            let known_blocks = Vec::zcash_deserialize(&mut reader)?;
-            let stop_hash = block::Hash::zcash_deserialize(&mut reader)?;
-            let stop = if stop_hash != block::Hash([0; 32]) {
-                Some(stop_hash)
-            } else {
-                None
-            };
-            Ok(Message::GetHeaders { known_blocks, stop })
+        let received_version = ProtocolVersion::bitcoin_deserialize(&mut reader)?;
+        let get_headers = GetHeaders::bitcoin_deserialize(&mut reader)?;
+        if self.builder.version == received_version {
+            Ok(Message::GetHeaders(get_headers))
         } else {
-            Err(Error::Parse("getblocks version did not match negotiation"))
+            Err(Error::Parse("getheaders version did not match negotiation"))
         }
-    }
-
-    fn read_inv<R: Read>(&self, reader: R) -> Result<Message, Error> {
-        Ok(Message::Inv(Vec::zcash_deserialize(reader)?))
-    }
-
-    fn read_getdata<R: Read>(&self, reader: R) -> Result<Message, Error> {
-        Ok(Message::GetData(Vec::zcash_deserialize(reader)?))
-    }
-
-    fn read_notfound<R: Read>(&self, reader: R) -> Result<Message, Error> {
-        Ok(Message::NotFound(Vec::zcash_deserialize(reader)?))
-    }
-
-    fn read_tx<R: Read>(&self, rdr: R) -> Result<Message, Error> {
-        Ok(Message::Tx(Transaction::zcash_deserialize(rdr)?.into()))
-    }
-
-    fn read_mempool<R: Read>(&self, mut _reader: R) -> Result<Message, Error> {
-        Ok(Message::Mempool)
     }
 
     fn read_filterload<R: Read>(&self, mut reader: R, body_len: usize) -> Result<Message, Error> {
@@ -565,16 +488,13 @@ impl Codec {
 
         Ok(Message::FilterAdd { data: bytes })
     }
-
-    fn read_filterclear<R: Read>(&self, mut _reader: R) -> Result<Message, Error> {
-        Ok(Message::FilterClear)
-    }
 }
 
 // XXX replace these interior unit tests with exterior integration tests + proptest
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::{TimeZone, Utc};
     use futures::prelude::*;
     use tokio::runtime::Runtime;
 

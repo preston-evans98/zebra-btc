@@ -15,12 +15,35 @@ use crate::meta_addr::MetaAddr;
 mod version;
 pub use version::Version;
 
+mod get_blocks;
+pub use get_blocks::GetBlocks;
+
+mod get_headers;
+pub use get_headers::GetHeaders;
+
+mod merkle_block;
+pub use merkle_block::MerkleBlock;
+
+mod compact_block;
+pub use compact_block::CompactBlock;
+
+mod get_block_txn;
+pub use get_block_txn::GetBlockTxn;
+
+mod block_txn;
+pub use block_txn::BlockTxn;
+
+mod send_compact;
+pub use send_compact::SendCompact;
+
+use super::Command;
+
 pub trait Payload {
     fn serialized_size(&self) -> usize;
     fn to_bytes(&self) -> Result<Vec<u8>, std::io::Error>;
 }
 
-/// A Bitcoin-like network message for the Zcash protocol.
+/// A Bitcoin network message.
 ///
 /// The Zcash network protocol is mostly inherited from Bitcoin, and a list of
 /// Bitcoin network messages can be found [on the Bitcoin
@@ -115,12 +138,7 @@ pub enum Message {
     /// Otherwise, an inv packet with the maximum number (500) are sent.
     ///
     /// [Bitcoin reference](https://en.bitcoin.it/wiki/Protocol_documentation#getheaders)
-    GetBlocks {
-        /// Hashes of known blocks, ordered from highest height to lowest height.
-        known_blocks: Vec<block::Hash>,
-        /// Optionally, the last header to request.
-        stop: Option<block::Hash>,
-    },
+    GetBlocks(GetBlocks),
 
     /// An `inv` message.
     ///
@@ -143,12 +161,12 @@ pub enum Message {
     /// Otherwise, the maximum number of block headers (160) are sent.
     ///
     /// [Bitcoin reference](https://en.bitcoin.it/wiki/Protocol_documentation#getheaders)
-    GetHeaders {
+    GetHeaders(
         /// Hashes of known blocks, ordered from highest height to lowest height.
-        known_blocks: Vec<block::Hash>,
-        /// Optionally, the last header to request.
-        stop: Option<block::Hash>,
-    },
+        GetHeaders, // known_blocks: Vec<block::Hash>,
+                    // /// Optionally, the last header to request.
+                    // stop: Option<block::Hash>
+    ),
 
     /// A `headers` message.
     ///
@@ -248,11 +266,58 @@ pub enum Message {
 
     /// A `filterclear` message.
     ///
-    /// This was defined in [BIP37], which is included in Zcash.
+    /// This was defined in [BIP37]
     ///
     /// [Bitcoin reference](https://en.bitcoin.it/wiki/Protocol_documentation#filterload.2C_filteradd.2C_filterclear.2C_merkleblock)
     /// [BIP37]: https://github.com/bitcoin/bips/blob/master/bip-0037.mediawiki
     FilterClear,
+
+    /// A `MerkleBlock` message.
+    ///
+    /// A reply to a `getdata`` message which requested a block using the inventory type MSG_MERKLEBLOCK.
+    /// It is only part of the reply: if any matching transactions are found, they will be sent separately as `tx` messages.
+    /// [Bitccoin Reference](https://developer.bitcoin.org/reference/p2p_networking.html#merkleblock)
+    MerkleBlock(MerkleBlock),
+
+    /// A `compactblock` message.
+    ///
+    /// The “cmpctblock” message is a reply to a “getdata” message which requested a block using the inventory type “MSG_CMPCT_BLOCK”.
+    /// Note that “cmpctblock” is sent only if the requested block is recent enough.
+    /// [BIP 157](https://github.com/bitcoin/bips/blob/master/bip-0152.mediawiki)
+    CompactBlock(CompactBlock),
+
+    /// A `getblocktxn` message
+    ///
+    /// Upon receipt of a properly-formatted “getblocktxn” message,
+    /// nodes which recently provided the sender of such a message a “cmpctblock” message
+    /// for the block hash identified - [Bitcoin Reference](https://developer.bitcoin.org/reference/p2p_networking.html#getblocktxn)
+    /// Specified in [BIP 152](https://github.com/bitcoin/bips/blob/master/bip-0152.mediawiki)
+    GetBlockTxn(GetBlockTxn),
+
+    /// A `blocktxn` essage
+    ///
+    /// Contains transactions from a cmpctblck message which the requester did not have in their mempool.
+    BlockTxn(BlockTxn),
+
+    /// A `sendcompact` message
+    ///
+    /// Requests that the receiver send cmpctblcks in future.
+    /// [Bitcoin Reference](https://developer.bitcoin.org/reference/p2p_networking.html#sendcmpct)
+    /// Defined in [BIP 152](https://github.com/bitcoin/bips/blob/master/bip-0152.mediawiki)
+    SendCompact(SendCompact),
+
+    /// A `Feefilter` message
+    ///
+    /// The “feefilter” message is a request to the receiving peer to not relay any transaction inv messages to
+    /// the sending peer where the fee rate for the transaction is below the fee rate specified in the feefilter message.
+    /// Defined in [BIP 133](https://github.com/bitcoin/bips/blob/master/bip-0133.mediawiki)
+    FeeFilter(u64),
+
+    /// A `sendheaders` message
+    ///
+    /// The “sendheaders” message tells the receiving peer to send new block
+    /// announcements using a “headers” message rather than an “inv” message.
+    SendHeaders,
 }
 
 impl<E> From<E> for Message
@@ -315,39 +380,46 @@ impl fmt::Display for Message {
             Message::FilterLoad { .. } => "filterload",
             Message::FilterAdd { .. } => "filteradd",
             Message::FilterClear => "filterclear",
+            Message::MerkleBlock(_) => "merkleblock",
+            Message::CompactBlock(_) => "cmpctblck",
+            Message::GetBlockTxn(_) => "getblocktxn",
+            Message::BlockTxn(_) => "blocktxn",
+            Message::SendCompact(_) => "sendcmpct",
+            Message::FeeFilter(_) => "feefilter",
+            Message::SendHeaders => "sendheaders",
         })
     }
 }
 
-// impl Message {
-//     pub fn command(&self) -> Command {
-//         match self {
-//             Message::Addr { .. } => Command::Addr,
-//             Message::BlockTxn { .. } => Command::BlockTxn,
-//             Message::Block { .. } => Command::Block,
-//             Message::CompactBlock { .. } => Command::CmpctBlock,
-//             Message::FeeFilter { .. } => Command::FeeFilter,
-//             Message::FilterAdd { .. } => Command::FilterAdd,
-//             Message::FilterClear {} => Command::FilterClear,
-//             Message::FilterLoad { .. } => Command::FilterLoad,
-//             Message::GetAddr {} => Command::GetAddr,
-//             Message::GetBlockTxn { .. } => Command::GetBlockTxn,
-//             Message::GetBlocks { .. } => Command::GetBlocks,
-//             Message::GetData { .. } => Command::GetData,
-//             Message::GetHeaders { .. } => Command::GetHeaders,
-//             Message::Headers { .. } => Command::Headers,
-//             Message::Inv { .. } => Command::Inv,
-//             Message::MemPool {} => Command::MemPool,
-//             Message::MerkleBlock { .. } => Command::MerkleBlock,
-//             Message::NotFound { .. } => Command::MemPool,
-//             Message::Ping { .. } => Command::Ping,
-//             Message::Pong { .. } => Command::Pong,
-//             Message::Reject { .. } => Command::Reject,
-//             Message::SendCompact { .. } => Command::SendCmpct,
-//             Message::SendHeaders {} => Command::SendHeaders,
-//             Message::Tx { .. } => Command::Tx,
-//             Message::Verack {} => Command::Verack,
-//             Message::Version { .. } => Command::Version,
-//         }
-//     }
-// }
+impl Message {
+    pub fn command(&self) -> Command {
+        match self {
+            Message::Addr { .. } => Command::Addr,
+            Message::BlockTxn { .. } => Command::BlockTxn,
+            Message::Block { .. } => Command::Block,
+            Message::CompactBlock { .. } => Command::CmpctBlock,
+            Message::FeeFilter { .. } => Command::FeeFilter,
+            Message::FilterAdd { .. } => Command::FilterAdd,
+            Message::FilterClear {} => Command::FilterClear,
+            Message::FilterLoad { .. } => Command::FilterLoad,
+            Message::GetAddr {} => Command::GetAddr,
+            Message::GetBlockTxn { .. } => Command::GetBlockTxn,
+            Message::GetBlocks { .. } => Command::GetBlocks,
+            Message::GetData { .. } => Command::GetData,
+            Message::GetHeaders { .. } => Command::GetHeaders,
+            Message::Headers { .. } => Command::Headers,
+            Message::Inv { .. } => Command::Inv,
+            Message::Mempool {} => Command::MemPool,
+            Message::MerkleBlock { .. } => Command::MerkleBlock,
+            Message::NotFound { .. } => Command::MemPool,
+            Message::Ping { .. } => Command::Ping,
+            Message::Pong { .. } => Command::Pong,
+            Message::Reject { .. } => Command::Reject,
+            Message::SendCompact { .. } => Command::SendCmpct,
+            Message::SendHeaders {} => Command::SendHeaders,
+            Message::Tx { .. } => Command::Tx,
+            Message::Verack {} => Command::Verack,
+            Message::Version { .. } => Command::Version,
+        }
+    }
+}

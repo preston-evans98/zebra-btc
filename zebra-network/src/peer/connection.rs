@@ -27,7 +27,7 @@ use zebra_chain::{
 use crate::{
     constants,
     protocol::{
-        external::{types::Nonce, InventoryHash, Message},
+        external::{types::Nonce, GetBlocks, GetHeaders, InventoryHash, Message},
         internal::{Request, Response},
     },
     BoxError,
@@ -657,7 +657,9 @@ where
             (AwaitingRequest, FindBlocks { known_blocks, stop }) => {
                 match self
                     .peer_tx
-                    .send(Message::GetBlocks { known_blocks, stop })
+                    .send(Message::GetBlocks ( GetBlocks{
+                        block_header_hashes: known_blocks, stop_hash: stop
+                    } ))
                     .await
                 {
                     Ok(()) => Ok((
@@ -674,7 +676,9 @@ where
             (AwaitingRequest, FindHeaders { known_blocks, stop }) => {
                 match self
                     .peer_tx
-                    .send(Message::GetHeaders { known_blocks, stop })
+                    .send(Message::GetHeaders ( GetHeaders{
+                        block_header_hashes: known_blocks, stop_hash: stop
+                    } ))
                     .await
                 {
                     Ok(()) => Ok((
@@ -852,11 +856,13 @@ where
                 }
             },
             Message::GetAddr => Request::Peers,
-            Message::GetBlocks { known_blocks, stop } => Request::FindBlocks { known_blocks, stop },
-            Message::GetHeaders { known_blocks, stop } => {
-                Request::FindHeaders { known_blocks, stop }
-            }
+            // FIXME: implement
+            // Message::GetBlocks { known_blocks, stop } => Request::FindBlocks { known_blocks, stop },
+            // Message::GetHeaders { known_blocks, stop } => {
+            //     Request::FindHeaders { known_blocks, stop }
+            // }
             Message::Mempool => Request::MempoolTransactions,
+            _ => todo!(),
         };
 
         self.drive_peer_request(req).await

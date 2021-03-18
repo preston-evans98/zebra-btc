@@ -1,20 +1,40 @@
-use super::PrefilledTransaction;
-use bytes::Buf;
-use serde_derive::{Deserializable, Serializable};
-use shared::BlockHeader;
-use shared::CompactInt;
-use shared::Serializable;
-// #[derive(Serializable, Deserializable, Debug, Clone)]
-pub struct CompactBlock {
-    header: BlockHeader,
-    nonce: u64,
-    short_ids: Vec<u64>,
-    prefilled_txns: Vec<PrefilledTransaction>,
+use std::convert::TryInto;
+
+// use super::PrefilledTransaction;
+// use bytes::Buf;
+// use serde_derive::{Deserializable, Serializable};
+// use shared::BlockHeader;
+// use shared::CompactInt;
+// use shared::Serializable;
+use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
+use zebra_chain::{
+    block, compactint::CompactInt, transaction::Transaction, BitcoinDeserialize, BitcoinSerialize,
+    SerializationError,
+};
+
+#[derive(BtcSerialize, BtcDeserialize, PartialEq, Eq, Debug, Clone)]
+pub struct PrefilledTransaction {
+    pub index: CompactInt,
+    pub tx: Transaction,
 }
 
-impl super::Payload for CompactBlock {
+impl PrefilledTransaction {
+    /// Returns the serialized length of a PrefilledTx
+    pub fn len(&self) -> usize {
+        self.tx.len() + CompactInt::size(self.index.value().try_into().unwrap())
+    }
+}
+#[derive(BtcSerialize, BtcDeserialize, PartialEq, Eq, Debug, Clone)]
+pub struct CompactBlock {
+    pub header: block::Header,
+    pub nonce: u64,
+    pub short_ids: Vec<u64>,
+    pub prefilled_txns: Vec<PrefilledTransaction>,
+}
+
+impl CompactBlock {
     fn serialized_size(&self) -> usize {
-        let mut len = BlockHeader::len()
+        let mut len = block::Header::len()
             + 8
             + CompactInt::size(self.short_ids.len())
             + 8 * self.short_ids.len()
@@ -24,32 +44,25 @@ impl super::Payload for CompactBlock {
         }
         len
     }
-    fn to_bytes(&self) -> Result<Vec<u8>, std::io::Error> {
-        let mut result = Vec::with_capacity(self.serialized_size());
-        self.serialize(&mut result)?;
-        Ok(result)
-    }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::types::PrefilledTransaction;
+// FIXME: swap to proptest
 
-    use super::super::Payload;
-    use shared::BlockHeader;
-    #[test]
-    fn serial_size() {
-        let txs = PrefilledTransaction::_test_txs();
-        let header = BlockHeader::_test_header();
+// #[cfg(test)]
+// mod tests {
+//     #[test]
+//     fn serial_size() {
+//         let txs = PrefilledTransaction::_test_txs();
+//         let header = BlockHeader::_test_header();
 
-        let msg = super::CompactBlock {
-            header,
-            nonce: 1928712,
-            short_ids: Vec::from([8219u64; 7]),
-            prefilled_txns: txs,
-        };
-        let serial = msg.to_bytes().expect("Serializing into vec shouldn't fail");
-        assert_eq!(serial.len(), msg.serialized_size());
-        assert_eq!(serial.len(), serial.capacity())
-    }
-}
+//         let msg = super::CompactBlock {
+//             header,
+//             nonce: 1928712,
+//             short_ids: Vec::from([8219u64; 7]),
+//             prefilled_txns: txs,
+//         };
+//         let serial = msg.to_bytes().expect("Serializing into vec shouldn't fail");
+//         assert_eq!(serial.len(), msg.serialized_size());
+//         assert_eq!(serial.len(), serial.capacity())
+//     }
+// }

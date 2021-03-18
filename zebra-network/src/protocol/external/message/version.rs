@@ -1,12 +1,7 @@
 use super::super::types::*;
 use super::{Nonce, ProtocolVersion};
-use bytes::Buf;
-use chrono::{DateTime, TimeZone, Utc};
-// use config::Config;
-// use serde_derive::{Deserializable, Serializable};
-// use shared::{CompactInt, Serializable};
-use crate::constants;
 use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
+use chrono::{DateTime, TimeZone, Utc};
 use std::net;
 use std::net::SocketAddr;
 use std::time::{SystemTime, UNIX_EPOCH};

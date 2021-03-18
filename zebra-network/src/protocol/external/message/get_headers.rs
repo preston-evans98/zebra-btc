@@ -1,63 +1,65 @@
 use super::ProtocolVersion;
-use bytes::Buf;
-use config::Config;
-use serde_derive::{Deserializable, Serializable};
-use shared::{BlockHash, CompactInt, Serializable};
-use tracing::warn;
-#[derive(Serializable, Deserializable, Debug, Clone)]
+use zebra_chain::{
+    block, compactint::CompactInt, BitcoinDeserialize, BitcoinSerialize, SerializationError,
+};
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct GetHeaders {
-    protocol_version: ProtocolVersion,
-    block_header_hashes: Vec<BlockHash>,
-    stop_hash: BlockHash,
+    /// A list of the sender's bets known block hashes, ordered from newest to oldest
+    pub block_header_hashes: Vec<block::Hash>,
+    /// The stop hash. Set to None if the observed stop hash is [0u8;32],
+    /// which signifies that the sender wants as many hashes as we can send (up to 2000)
+    pub stop_hash: Option<block::Hash>,
+}
+
+impl BitcoinDeserialize for GetHeaders {
+    fn bitcoin_deserialize<R: std::io::Read>(mut reader: R) -> Result<Self, SerializationError>
+    where
+        Self: Sized,
+    {
+        let block_header_hashes = Vec::bitcoin_deserialize(&mut reader)?;
+        let raw_stop_hash = block::Hash::bitcoin_deserialize(&mut reader)?;
+        let stop_hash = if raw_stop_hash.0 == [0u8; 32] {
+            None
+        } else {
+            Some(raw_stop_hash)
+        };
+        Ok(GetHeaders {
+            block_header_hashes,
+            stop_hash,
+        })
+    }
+}
+
+impl BitcoinSerialize for GetHeaders {
+    fn bitcoin_serialize<W: std::io::Write>(&self, mut target: W) -> Result<(), std::io::Error> {
+        self.block_header_hashes.bitcoin_serialize(&mut target)?;
+        match self.stop_hash {
+            Some(hash) => hash.bitcoin_serialize(&mut target),
+            None => [0u8; 32].bitcoin_serialize(&mut target),
+        }
+    }
 }
 
 impl GetHeaders {
-    pub fn new(block_hashes: Vec<BlockHash>, inv_message: bool, config: &Config) -> GetHeaders {
-        let message = GetHeaders {
-            protocol_version: config.get_protocol_version(),
-            block_header_hashes: block_hashes,
-            stop_hash: BlockHash::from([0u8; 32]),
-        };
-        if !inv_message {
-            //The header hash of the last header hash being requested; set to all zeroes to request an “inv” message
-            //with all subsequent header hashes (a maximum of 2000 will be sent as a reply to this message;
-            //if you need more than 2000, you will need to send another "getheaders" message with a higher-height
-            //header hash as the first entry in block header hash field).
-            match message.block_header_hashes.last() {
-                Some(_) => {} // message.stop_hash = *hash.clone(),
-                None => {
-                    warn!("GetHeaders: stop hash was empty");
-                }
-            }
-        }
-        message
-    }
-}
-impl super::Payload for GetHeaders {
     fn serialized_size(&self) -> usize {
         4 + CompactInt::size(self.block_header_hashes.len())
             + (self.block_header_hashes.len() * 32)
             + 32 //protocol version, block header hashes, and stop_hash
     }
-    fn to_bytes(&self) -> Result<Vec<u8>, std::io::Error> {
-        let mut target = Vec::with_capacity(self.serialized_size());
-        self.serialize(&mut target)?;
-        Ok(target)
-    }
 }
 
 #[test]
 fn serial_size() {
-    use super::Payload;
-    let int1 = BlockHash::from_u64(567892322);
-    let int2 = BlockHash::from_u64(7892322);
-    let int3 = BlockHash::from_u64(1);
+    let int1 = block::Hash::from_bytes_exact([0u8; 32]);
+    let int2 = block::Hash::from_bytes_exact([1u8; 32]);
+    let int3 = block::Hash::from_bytes_exact([3u8; 32]);
     let msg = GetHeaders {
-        protocol_version: 32371,
         block_header_hashes: Vec::from([int1, int2, int3]),
-        stop_hash: BlockHash::from([0u8; 32]),
+        stop_hash: Some(block::Hash::from_bytes_exact([0u8; 32])),
     };
-    let serial = msg.to_bytes().expect("Serializing into vec shouldn't fail");
+    let serial = msg
+        .bitcoin_serialize_to_vec()
+        .expect("Serializing into vec shouldn't fail");
     assert_eq!(serial.len(), msg.serialized_size());
     assert_eq!(serial.len(), serial.capacity())
 }

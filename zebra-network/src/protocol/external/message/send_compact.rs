@@ -1,32 +1,27 @@
-use bytes::Buf;
-use serde_derive::{Deserializable, Serializable};
-use shared::Serializable;
+use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
+use zebra_chain::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
 
-#[derive(Serializable, Deserializable, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, BtcDeserialize, BtcSerialize)]
 pub struct SendCompact {
-    announce: bool,
-    version: u64,
+    pub announce: bool,
+    pub version: u64,
 }
 
-impl super::Payload for SendCompact {
-    fn serialized_size(&self) -> usize {
+impl SendCompact {
+    pub const fn serialized_size(&self) -> usize {
         9
-    }
-    fn to_bytes(&self) -> Result<Vec<u8>, std::io::Error> {
-        let mut out = Vec::with_capacity(self.serialized_size());
-        self.serialize(&mut out)?;
-        Ok(out)
     }
 }
 
 #[test]
 fn serial_size() {
-    use super::Payload;
     let msg = SendCompact {
         announce: true,
         version: 32381,
     };
-    let serial = msg.to_bytes().expect("Serializing into vec shouldn't fail");
+    let serial = msg
+        .bitcoin_serialize_to_vec()
+        .expect("Serializing into vec shouldn't fail");
     assert_eq!(serial.len(), msg.serialized_size());
     assert_eq!(serial.len(), serial.capacity())
 }
