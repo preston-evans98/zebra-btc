@@ -13,3 +13,4 @@
 .cargo/
 # Nix configs
 shell.nix
+**/._github/*
