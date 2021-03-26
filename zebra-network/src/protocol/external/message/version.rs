@@ -128,14 +128,6 @@ impl Version {
 //     }
 // }
 
-fn secs_since_the_epoch() -> u64 {
-    let start = SystemTime::now();
-    start
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_secs_f64() as u64
-}
-
 // #[test]
 // fn serial_size() {
 //     use super::Payload;

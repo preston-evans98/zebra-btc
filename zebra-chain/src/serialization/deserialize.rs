@@ -1,8 +1,11 @@
 use super::CompactInt;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use chrono::{DateTime, TimeZone, Utc};
-use std::io;
-use std::net::SocketAddr;
+use std::net::{Ipv6Addr, SocketAddr};
+use std::{
+    io,
+    net::IpAddr::{V4, V6},
+};
 
 use super::SerializationError;
 
@@ -115,11 +118,14 @@ impl BitcoinDeserialize for String {
 // TODO: test
 impl BitcoinDeserialize for SocketAddr {
     fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<SocketAddr> {
-        Ok(SocketAddr::from((
-            <[u8; 16]>::bitcoin_deserialize(&mut reader)?,
-            reader.read_u16::<LittleEndian>()?,
-            // u16::read(&mut reader)?,
-        )))
+        let octets = <[u8; 16]>::bitcoin_deserialize(&mut reader)?;
+        let v6_addr = Ipv6Addr::from(octets);
+
+        let addr = match v6_addr.to_ipv4() {
+            Some(v4_addr) => V4(v4_addr),
+            None => V6(v6_addr),
+        };
+        Ok(SocketAddr::from((addr, reader.read_u16::<BigEndian>()?)))
     }
 }
 
