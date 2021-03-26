@@ -503,16 +503,15 @@ mod tests {
         zebra_test::init();
         use std::net::{IpAddr, Ipv4Addr, SocketAddr};
         let services = PeerServices::NODE_NETWORK;
-        let timestamp = Utc.timestamp(1_568_000_000, 0);
 
         let rt = Runtime::new().unwrap();
 
         let v = Message::Version(Version::new(
             crate::constants::CURRENT_VERSION,
-            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 6)), 8233),
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 6)), 8333),
             services,
             services,
-            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 6)), 8233),
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 6)), 8333),
             Nonce(0x9082_4908_8927_9238),
             "Beaver".to_owned(),
             block::Height(540_000),

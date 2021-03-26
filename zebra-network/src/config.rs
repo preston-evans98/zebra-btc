@@ -87,27 +87,31 @@ impl Config {
 
 impl Default for Config {
     fn default() -> Config {
-        let mainnet_peers = [
-            "dnsseed.z.cash:8233",
-            "dnsseed.str4d.xyz:8233",
-            "mainnet.seeder.zfnd.org:8233",
-            "mainnet.is.yolo.money:8233",
+        // FIXME: Add BTC dns seeders
+        let mainnet_peers: HashSet<String> = [
+            ""
+            // "dnsseed.z.cash:8233",
+            // "dnsseed.str4d.xyz:8233",
+            // "mainnet.seeder.zfnd.org:8233",
+            // "mainnet.is.yolo.money:8233",
         ]
         .iter()
         .map(|&s| String::from(s))
         .collect();
 
+        // FIXME: Add BTC dns seeders
         let testnet_peers = [
-            "dnsseed.testnet.z.cash:18233",
-            "testnet.seeder.zfnd.org:18233",
-            "testnet.is.yolo.money:18233",
+            ""
+            // "dnsseed.testnet.z.cash:18233",
+            // "testnet.seeder.zfnd.org:18233",
+            // "testnet.is.yolo.money:18233",
         ]
         .iter()
         .map(|&s| String::from(s))
         .collect();
 
         Config {
-            listen_addr: "0.0.0.0:8233"
+            listen_addr: "0.0.0.0:8333"
                 .parse()
                 .expect("Hardcoded address should be parseable"),
             network: Network::Mainnet,

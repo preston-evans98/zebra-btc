@@ -121,8 +121,8 @@ where
     // TODO: use the right port if the port is unspecified
     //       split the address and port configs?
     let (wrong_net, wrong_net_port) = match config.network {
-        Network::Mainnet => (Network::Testnet, 18233),
-        Network::Testnet => (Network::Mainnet, 8233),
+        Network::Mainnet => (Network::Testnet, 18333),
+        Network::Testnet => (Network::Mainnet, 8333),
     };
     if config.listen_addr.port() == wrong_net_port {
         warn!(

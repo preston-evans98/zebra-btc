@@ -6,7 +6,6 @@ use std::{
     net::SocketAddr,
 };
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use chrono::{DateTime, TimeZone, Utc};
 
 use zebra_chain::serialization::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
@@ -94,7 +93,7 @@ mod tests {
 
         let entry = MetaAddr {
             services: PeerServices::default(),
-            addr: "127.0.0.1:8233".parse().unwrap(),
+            addr: "127.0.0.1:8333".parse().unwrap(),
             last_seen: Utc.timestamp(1_573_680_222, 0),
         }
         .sanitize();

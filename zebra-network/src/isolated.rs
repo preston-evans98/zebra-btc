@@ -61,7 +61,7 @@ pub fn connect_isolated(
     // connection through a socks proxy, not directly to the remote. But it
     // doesn't seem like zcashd cares if we give a bogus one, and Zebra doesn't
     // touch it at all.
-    let remote_addr = "0.0.0.0:8233".parse().unwrap();
+    let remote_addr = "0.0.0.0:8333".parse().unwrap();
 
     Oneshot::new(handshake, (conn, remote_addr)).map_ok(|client| BoxService::new(Wrapper(client)))
 }
@@ -127,7 +127,7 @@ mod tests {
             assert_eq!(version.timestamp.timestamp() % (5 * 60), 0);
             assert_eq!(
                 version.address_from,
-                (PeerServices::empty(), "0.0.0.0:8233".parse().unwrap())
+                (PeerServices::empty(), "0.0.0.0:8333".parse().unwrap())
             );
             assert_eq!(version.user_agent, "");
             assert_eq!(version.best_block.0, 0);
