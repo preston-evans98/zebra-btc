@@ -15,7 +15,7 @@ ENV CARGO_HOME /zebra/.cargo/
 
 RUN rustc -V; cargo -V; rustup -V
 
-EXPOSE 8233 18233
+EXPOSE 8333 18333
 
 COPY . .
 

@@ -45,7 +45,7 @@ RUN printf "[tracing]\n" >> /zebrad.toml
 RUN printf "endpoint_addr = '0.0.0.0:3000'\n" >> /zebrad.toml
 RUN cat /zebrad.toml
 
-EXPOSE 3000 8233 18233
+EXPOSE 3000 8333 18333
 
 ENV RUST_LOG debug
 ENV RUST_BACKTRACE full
