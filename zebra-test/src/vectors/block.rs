@@ -10,7 +10,8 @@ lazy_static! {
     /// All block test vectors
     pub static ref BLOCKS: Vec<&'static [u8]> = MAINNET_BLOCKS
         .iter()
-        .chain(TESTNET_BLOCKS.iter())
+        // FIXME: Uncomment once test-net blocks are replaced
+        // .chain(TESTNET_BLOCKS.iter())
         .map(|(_height, block)| *block)
         .collect();
 
@@ -52,15 +53,6 @@ lazy_static! {
             // Blossom
             (653_600, BLOCK_MAINNET_653600_BYTES.as_ref()),
             (653_601, BLOCK_MAINNET_653601_BYTES.as_ref()),
-            (902_999, BLOCK_MAINNET_902999_BYTES.as_ref()),
-            // Heartwood
-            (903_000, BLOCK_MAINNET_903000_BYTES.as_ref()),
-            (903_001, BLOCK_MAINNET_903001_BYTES.as_ref()),
-            // Shielded coinbase x3
-            (949_496, BLOCK_MAINNET_949496_BYTES.as_ref()),
-            (975_066, BLOCK_MAINNET_975066_BYTES.as_ref()),
-            (982_681, BLOCK_MAINNET_982681_BYTES.as_ref()),
-            // TODO: Canopy and First Halving, see #1099
         ].iter().cloned().collect();
 
     /// Testnet blocks, indexed by height
@@ -163,12 +155,6 @@ lazy_static! {
         <Vec<u8>>::from_hex(include_str!("block-main-0-000-202.txt").trim())
             .expect("Block bytes are in valid hex representation");
 
-    /// This contains an encoding of block 202 but with an improperly encoded
-    /// coinbase height.
-    pub static ref BAD_BLOCK_MAINNET_202_BYTES: Vec<u8> =
-        <Vec<u8>>::from_hex(include_str!("block-main-0-000-202-bad.txt").trim())
-            .expect("Block bytes are in valid hex representation");
-
     // Overwinter transition
     // for i in 347499 347500 347501; do
     //     zcash-cli getblock $i 0 > block-main-$[i/1000000]-$[i/1000%1000]-$[i%1000].txt
@@ -210,6 +196,7 @@ lazy_static! {
     // for i in 653599 653600 653601; do
     //     zcash-cli getblock $i 0 > block-main-$[i/1000000]-$[i/1000%1000]-$[i%1000].txt
     // done
+    // TODO: Add back after implementing SegWit
     pub static ref BLOCK_MAINNET_653599_BYTES: Vec<u8> =
         <Vec<u8>>::from_hex(include_str!("block-main-0-653-599.txt").trim())
             .expect("Block bytes are in valid hex representation");
@@ -220,44 +207,6 @@ lazy_static! {
         <Vec<u8>>::from_hex(include_str!("block-main-0-653-601.txt").trim())
             .expect("Block bytes are in valid hex representation");
 
-    // Heartwood transition
-    // i=902999
-    // zcash-cli getblock $i 0 > block-main-$[i/1000000]-$[i/1000%1000]-$[i%1000].txt
-    pub static ref BLOCK_MAINNET_902999_BYTES: Vec<u8> =
-        <Vec<u8>>::from_hex(include_str!("block-main-0-902-999.txt").trim())
-            .expect("Block bytes are in valid hex representation");
-    // for i in 903000 903001; do
-    //     zcash-cli getblock $i 0 > block-main-$[i/1000000]-$[i/1000%1000]-00$[i%1000].txt
-    // done
-    pub static ref BLOCK_MAINNET_903000_BYTES: Vec<u8> =
-        <Vec<u8>>::from_hex(include_str!("block-main-0-903-000.txt").trim())
-            .expect("Block bytes are in valid hex representation");
-    pub static ref BLOCK_MAINNET_903001_BYTES: Vec<u8> =
-        <Vec<u8>>::from_hex(include_str!("block-main-0-903-001.txt").trim())
-        .expect("Block bytes are in valid hex representation");
-    // Shielded coinbase
-    // for i in 949496 982681; do
-    //     zcash-cli getblock $i 0 > block-main-$[i/1000000]-$[i/1000%1000]-$[i%1000].txt
-    // done
-    // i=975066
-    // zcash-cli getblock $i 0 > block-main-$[i/1000000]-$[i/1000%1000]-0$[i%1000].txt
-    // First shielded coinbase block
-    pub static ref BLOCK_MAINNET_949496_BYTES: Vec<u8> =
-        <Vec<u8>>::from_hex(include_str!("block-main-0-949-496.txt").trim())
-            .expect("Block bytes are in valid hex representation");
-    // Largest shielded coinbase block so far (in bytes)
-    pub static ref BLOCK_MAINNET_975066_BYTES: Vec<u8> =
-        <Vec<u8>>::from_hex(include_str!("block-main-0-975-066.txt").trim())
-        .expect("Block bytes are in valid hex representation");
-    // Last shielded coinbase block so far
-    pub static ref BLOCK_MAINNET_982681_BYTES: Vec<u8> =
-        <Vec<u8>>::from_hex(include_str!("block-main-0-982-681.txt").trim())
-        .expect("Block bytes are in valid hex representation");
-
-    // TODO: Canopy transition, after mainnet canopy activation
-    // for i in 1046399 1046400 1046401; do
-    //     zcash-cli getblock $i 0 > block-main-$[i/1000000]-0$[i/1000%1000]-$[i%1000].txt
-    // done
 
     // TODO: one more Canopy Mainnet block
     //       (so that we have at least 3 blocks from Canopy)
