@@ -1,6 +1,6 @@
 //! A Tokio codec mapping byte streams to Bitcoin message streams.
 
-use std::{fmt, net::SocketAddr};
+use std::fmt;
 use std::{
     io::{Cursor, Read, Write},
     sync::Arc,
@@ -170,7 +170,7 @@ impl Codec {
             Message::Reject {
                 message,
                 ccode,
-                reason,
+                reason: _,
                 data,
             } => {
                 // todo!()
@@ -494,7 +494,6 @@ impl Codec {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{TimeZone, Utc};
     use futures::prelude::*;
     use tokio::runtime::Runtime;
 

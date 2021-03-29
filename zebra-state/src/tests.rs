@@ -4,7 +4,6 @@ use primitive_types::U256;
 use zebra_chain::{
     block::{self, Block},
     cached::Cached,
-    transaction::Transaction,
     transparent,
     work::difficulty::ExpandedDifficulty,
     work::difficulty::Work,

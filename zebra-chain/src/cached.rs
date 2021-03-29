@@ -32,8 +32,7 @@ where
     T: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Ok(())
-        self.0.fmt(f);
+        self.0.fmt(f)?;
         Ok(())
     }
 }

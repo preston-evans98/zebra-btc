@@ -49,10 +49,10 @@ lazy_static! {
             (419_201, BLOCK_MAINNET_419201_BYTES.as_ref()),
             // A bad version field
             (434_873, BLOCK_MAINNET_434873_BYTES.as_ref()),
-            (653_599, BLOCK_MAINNET_653599_BYTES.as_ref()),
-            // Blossom
-            (653_600, BLOCK_MAINNET_653600_BYTES.as_ref()),
-            (653_601, BLOCK_MAINNET_653601_BYTES.as_ref()),
+            // (653_599, BLOCK_MAINNET_653599_BYTES.as_ref()),
+            // // Blossom
+            // (653_600, BLOCK_MAINNET_653600_BYTES.as_ref()),
+            // (653_601, BLOCK_MAINNET_653601_BYTES.as_ref()),
         ].iter().cloned().collect();
 
     /// Testnet blocks, indexed by height
@@ -197,15 +197,15 @@ lazy_static! {
     //     zcash-cli getblock $i 0 > block-main-$[i/1000000]-$[i/1000%1000]-$[i%1000].txt
     // done
     // TODO: Add back after implementing SegWit
-    pub static ref BLOCK_MAINNET_653599_BYTES: Vec<u8> =
-        <Vec<u8>>::from_hex(include_str!("block-main-0-653-599.txt").trim())
-            .expect("Block bytes are in valid hex representation");
-    pub static ref BLOCK_MAINNET_653600_BYTES: Vec<u8> =
-        <Vec<u8>>::from_hex(include_str!("block-main-0-653-600.txt").trim())
-            .expect("Block bytes are in valid hex representation");
-    pub static ref BLOCK_MAINNET_653601_BYTES: Vec<u8> =
-        <Vec<u8>>::from_hex(include_str!("block-main-0-653-601.txt").trim())
-            .expect("Block bytes are in valid hex representation");
+    // pub static ref BLOCK_MAINNET_653599_BYTES: Vec<u8> =
+    //     <Vec<u8>>::from_hex(include_str!("block-main-0-653-599.txt").trim())
+    //         .expect("Block bytes are in valid hex representation");
+    // pub static ref BLOCK_MAINNET_653600_BYTES: Vec<u8> =
+    //     <Vec<u8>>::from_hex(include_str!("block-main-0-653-600.txt").trim())
+    //         .expect("Block bytes are in valid hex representation");
+    // pub static ref BLOCK_MAINNET_653601_BYTES: Vec<u8> =
+    //     <Vec<u8>>::from_hex(include_str!("block-main-0-653-601.txt").trim())
+    //         .expect("Block bytes are in valid hex representation");
 
 
     // TODO: one more Canopy Mainnet block

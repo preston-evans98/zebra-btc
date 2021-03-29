@@ -7,7 +7,7 @@ use std::{
     task::{Context, Poll},
 };
 
-use chrono::{TimeZone, Utc};
+use chrono::Utc;
 use futures::{
     channel::{mpsc, oneshot},
     prelude::*,
@@ -242,8 +242,6 @@ where
             //
             // To try to stay within the range where zcashd will ignore our clock skew,
             // truncate the timestamp to the nearest 5 minutes.
-            let now = Utc::now().timestamp();
-            let timestamp = Utc.timestamp(now - now.rem_euclid(5 * 60), 0);
             let version = Message::Version(Version::new(
                 constants::CURRENT_VERSION,
                 addr,

@@ -6,12 +6,12 @@ use std::{
     task::{Context, Poll},
 };
 
-use futures::{
-    stream::{FuturesUnordered, StreamExt},
-    FutureExt,
-};
-use tower::{Service, ServiceExt};
-use tracing::Instrument;
+// use futures::{
+//     // stream::{FuturesUnordered, StreamExt},
+//     FutureExt,
+// };
+use tower::Service;
+// use tracing::Instrument;
 
 use zebra_chain::{
     block,
@@ -20,7 +20,7 @@ use zebra_chain::{
     transparent,
 };
 
-use zebra_script::CachedFfiTransaction;
+// use zebra_script::CachedFfiTransaction;
 use zebra_state as zs;
 
 use crate::{error::TransactionError, script, BoxError};
@@ -100,7 +100,8 @@ where
     }
 
     // TODO: break up each chunk into its own method
-    fn call(&mut self, req: Request) -> Self::Future {
+    fn call(&mut self, _req: Request) -> Self::Future {
+        todo!()
         // let is_mempool = match req {
         //     Request::Block { .. } => false,
         //     Request::Mempool { .. } => true,
@@ -262,6 +263,5 @@ where
         // }
         // .instrument(span)
         // .boxed()
-        todo!()
     }
 }

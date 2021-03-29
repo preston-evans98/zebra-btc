@@ -1,10 +1,9 @@
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, HashMap, HashSet},
-    ops::Deref,
 };
 
-use tracing::{debug_span, instrument, trace};
+use tracing::instrument;
 use zebra_chain::{block, transaction, transparent, work::difficulty::PartialCumulativeWork};
 
 use crate::{PreparedBlock, Utxo};

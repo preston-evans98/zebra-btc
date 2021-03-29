@@ -133,11 +133,11 @@ impl Header {
         }
     }
 
-    pub fn bitcoin_serialize_to_vec(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(Header::len());
-        self.bitcoin_serialize(&mut out);
-        out
-    }
+    // pub fn bitcoin_serialize_to_vec(&self) -> Vec<u8> {
+    //     let mut out = Vec::with_capacity(Header::len());
+    //     self.bitcoin_serialize(&mut out);
+    //     out
+    // }
     /// Deserializes a block header from a Buf object, allowing more efficient block hash calculation than vanilla deserialize
     pub fn deserialize_from_buf<B: Buf>(mut src: B) -> Result<Self, SerializationError> {
         if src.remaining() < Header::len() {
@@ -147,9 +147,9 @@ impl Header {
         }
         // Hash the next 80 bytes (the header). This avoids needing to reserialize and hash later.
         // Note: this op is zero-copy if the underlying is a Bytes or BytesMut object
-        let mut src = src.copy_to_bytes(80);
+        let src = src.copy_to_bytes(80);
         let mut hash_writer = sha256d::Writer::default();
-        hash_writer.write_all(&src[..]);
+        hash_writer.write_all(&src[..])?;
         let hash_bytes = hash_writer.finish();
         let own_hash = Hash::from_bytes_exact(hash_bytes);
 

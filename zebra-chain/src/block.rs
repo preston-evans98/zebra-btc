@@ -79,7 +79,7 @@ impl Block {
     /// 1. The block contains exactly one Coinbase transaction, and it's in the first position.
     /// 1. The block does not contain duplicate transactions
     /// 1. The transactions merkle-ize to the root in the block header
-    pub fn deserialize_from_buf(mut src: &mut BytesMut) -> Result<Self, SerializationError> {
+    pub fn deserialize_from_buf(src: &mut BytesMut) -> Result<Self, SerializationError> {
         let header = Header::deserialize_from_buf(src.split_to(80))?;
 
         let mut src = src.reader().take(MAX_BLOCK_BYTES);

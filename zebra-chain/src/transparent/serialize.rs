@@ -154,7 +154,7 @@ impl BitcoinSerialize for Input {
                 sequence.bitcoin_serialize(&mut writer)?;
             }
             Input::Coinbase {
-                height,
+                height: _,
                 data,
                 sequence,
             } => {

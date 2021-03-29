@@ -116,14 +116,14 @@ impl Input {
     pub fn len(&self) -> usize {
         match *self {
             Input::PrevOut {
-                outpoint,
+                outpoint: _,
                 ref unlock_script,
-                sequence,
+                sequence: _,
             } => OutPoint::len() + unlock_script.serialized_size() + 4,
             Input::Coinbase {
-                height,
+                height: _,
                 ref data,
-                sequence,
+                sequence: _,
             } => data.serialized_size() + 4,
         }
     }

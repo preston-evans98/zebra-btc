@@ -192,8 +192,6 @@ impl FinalizedState {
         let block_by_height = self.db.cf_handle("block_by_height").unwrap();
         let tx_by_hash = self.db.cf_handle("tx_by_hash").unwrap();
         let utxo_by_outpoint = self.db.cf_handle("utxo_by_outpoint").unwrap();
-        let sprout_nullifiers = self.db.cf_handle("sprout_nullifiers").unwrap();
-        let sapling_nullifiers = self.db.cf_handle("sapling_nullifiers").unwrap();
 
         // Assert that callers (including unit tests) get the chain order correct
         if self.is_empty(hash_by_height) {

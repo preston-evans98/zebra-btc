@@ -243,24 +243,25 @@ fn difficulty_validation_failure() -> Result<(), Report> {
     Ok(())
 }
 
-#[test]
-fn equihash_is_valid_for_historical_blocks() -> Result<(), Report> {
-    zebra_test::init();
+// TODO: Replace with check on sha256 proof of work
+// #[test]
+// fn equihash_is_valid_for_historical_blocks() -> Result<(), Report> {
+//     zebra_test::init();
 
-    let block_iter = zebra_test::vectors::BLOCKS.iter();
+//     let block_iter = zebra_test::vectors::BLOCKS.iter();
 
-    for block in block_iter {
-        let block = block
-            .bitcoin_deserialize_into::<Block>()
-            .expect("block is structurally valid");
+//     for block in block_iter {
+//         let block = block
+//             .bitcoin_deserialize_into::<Block>()
+//             .expect("block is structurally valid");
 
-        // FIXME: Replace
-        // check::equihash_solution_is_valid(&block.header)
-        //     .expect("the equihash solution from a historical block should be valid");
-    }
+//         // FIXME: Replace
+//         // check::equihash_solution_is_valid(&block.header)
+//         //     .expect("the equihash solution from a historical block should be valid");
+//     }
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 #[test]
 fn subsidy_is_valid_for_historical_blocks() -> Result<(), Report> {

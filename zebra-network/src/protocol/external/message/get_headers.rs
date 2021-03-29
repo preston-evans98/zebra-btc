@@ -1,4 +1,3 @@
-use super::ProtocolVersion;
 use zebra_chain::{
     block, compactint::CompactInt, BitcoinDeserialize, BitcoinSerialize, SerializationError,
 };

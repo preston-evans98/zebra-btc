@@ -383,7 +383,7 @@ impl BitcoinDeserialize for Amount<NonNegative> {
     fn bitcoin_deserialize<R: std::io::Read>(mut reader: R) -> Result<Self, SerializationError> {
         match reader.read_u64::<LittleEndian>()?.try_into() {
             Ok(val) => Ok(val),
-            Err(e) => Err(SerializationError::Parse(
+            Err(_) => Err(SerializationError::Parse(
                 "Could not parse val as non-negative amount",
             )),
         }

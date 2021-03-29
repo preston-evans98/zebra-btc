@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::cached::Cached;
 use crate::work::difficulty::CompactDifficulty;
 
 use super::*;

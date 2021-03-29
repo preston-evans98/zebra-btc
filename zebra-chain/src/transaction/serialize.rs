@@ -13,7 +13,7 @@ use crate::transparent;
 
 /// Deserializes a transaction, calculating and caching its TxID.
 impl BitcoinDeserialize for Transaction {
-    fn bitcoin_deserialize<R: std::io::Read>(mut src: R) -> Result<Self, SerializationError> {
+    fn bitcoin_deserialize<R: std::io::Read>(src: R) -> Result<Self, SerializationError> {
         // Put a sanity limit of 1 MB (a whole block) on the size of transaction to protect against DOS attacks
         let mut src = src.take(MAX_TX_SIZE);
         // Deserialize each field

@@ -4,7 +4,6 @@ use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
 use chrono::{DateTime, TimeZone, Utc};
 use std::net;
 use std::net::SocketAddr;
-use std::time::{SystemTime, UNIX_EPOCH};
 use zebra_chain::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
 
 use zebra_chain::block;
