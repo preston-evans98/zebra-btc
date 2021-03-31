@@ -18,9 +18,13 @@ impl Arbitrary for Block {
         let transactions_strategy = Transaction::vec_strategy(ledger_state, 2);
 
         (any::<Header>(), transactions_strategy)
-            .prop_map(|(header, transactions)| Self {
-                header,
-                transactions,
+            .prop_map(|(mut header, transactions)| {
+                header.merkle_root =
+                    crate::block::merkle::Root::from_iter(transactions.iter().map(|tx| tx.hash()));
+                Self {
+                    header,
+                    transactions,
+                }
             })
             .boxed()
     }

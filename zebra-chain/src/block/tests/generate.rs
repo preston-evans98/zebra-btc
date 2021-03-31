@@ -40,9 +40,22 @@ pub fn oversized_single_transaction_block() -> Block {
 fn multi_transaction_block(oversized: bool) -> Block {
     // A dummy transaction
     let tx = Transaction::bitcoin_deserialize(&zebra_test::vectors::DUMMY_TX1[..]).unwrap();
+    let coinbase_input = transparent::Input::Coinbase {
+        height: None,
+        data: CoinbaseData(Vec::new()),
+        sequence: 0,
+    };
+    let output =
+        transparent::Output::bitcoin_deserialize(&zebra_test::vectors::DUMMY_OUTPUT1[..]).unwrap();
+    let coinbase = Transaction::new(
+        1,
+        vec![coinbase_input],
+        vec![output],
+        LockTime::Height(crate::block::Height(0)),
+    );
 
     // A block header
-    let header = block_header();
+    let mut header = block_header();
 
     // Serialize header
     let mut data_header = Vec::new();
@@ -52,15 +65,20 @@ fn multi_transaction_block(oversized: bool) -> Block {
 
     // Calculate the number of transactions we need
     let mut max_transactions_in_block =
-        (MAX_BLOCK_BYTES as usize - data_header.len()) / zebra_test::vectors::DUMMY_TX1[..].len();
+        (MAX_BLOCK_BYTES as usize - data_header.len() - coinbase.len())
+            / zebra_test::vectors::DUMMY_TX1[..].len();
     if oversized {
         max_transactions_in_block += 1;
     }
 
     // Create transactions to be just below or just above the limit
-    let transactions = std::iter::repeat(Arc::new(tx))
-        .take(max_transactions_in_block)
+    let transactions = std::iter::once(Arc::new(coinbase))
+        .chain(std::iter::repeat(Arc::new(tx)))
+        .take(max_transactions_in_block + 1)
         .collect::<Vec<_>>();
+
+    header.merkle_root =
+        crate::block::merkle::Root::from_iter(transactions.iter().map(|tx| tx.hash()));
 
     // Add the transactions into a block
     Block {

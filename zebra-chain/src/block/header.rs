@@ -133,6 +133,10 @@ impl Header {
         }
     }
 
+    pub fn reported_height(&self) -> Option<usize> {
+        self.reported_height.value()
+    }
+
     // pub fn bitcoin_serialize_to_vec(&self) -> Vec<u8> {
     //     let mut out = Vec::with_capacity(Header::len());
     //     self.bitcoin_serialize(&mut out);

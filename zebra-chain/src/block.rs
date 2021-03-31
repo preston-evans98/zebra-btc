@@ -49,8 +49,8 @@ impl BitcoinDeserialize for Block {
         Self: Sized,
     {
         let mut src = reader.bytes().map(|result| match result {
-            // For real. Look at this. Don't do this. Ever.
-            Err(_) => 0,
+            // For real. Look at this. Don't use this in production. Ever.
+            Err(e) => panic!("Error deserializing block! {}", e),
             Ok(byte) => byte,
         });
         let mut src = BytesMut::from_iter(&mut src);
@@ -75,6 +75,9 @@ impl Block {
     /// TODO: this invariant is not upheld by the implementation of bitcoin_deserialize for transparent::Input
     /// Instead, it needs to be delegated to a higher-level function which is aware of the status of BIP34 activation.
     pub fn coinbase_height(&self) -> Option<Height> {
+        if let Some(height) = self.header.reported_height() {
+            return Some(Height(height as u32));
+        }
         self.transactions
             .get(0)
             .and_then(|tx| tx.inputs.get(0))

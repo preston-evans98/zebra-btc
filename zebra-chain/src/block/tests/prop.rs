@@ -33,11 +33,10 @@ proptest! {
     fn blockheader_roundtrip(header in any::<Header>()) {
         zebra_test::init();
 
-        // FIXME: Uncomment. This is currently crashing Rust Analyzer
-        // let bytes = header.bitcoin_serialize_to_vec().unwrap();
-        // let other_header = bytes.bitcoin_deserialize_into()?;
+        let bytes = header.bitcoin_serialize_to_vec().unwrap();
+        let other_header = bytes.bitcoin_deserialize_into()?;
 
-        // prop_assert_eq![header, other_header];
+        prop_assert_eq![header, other_header];
     }
 }
 
