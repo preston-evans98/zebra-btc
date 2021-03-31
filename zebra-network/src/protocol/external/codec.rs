@@ -279,12 +279,6 @@ impl Decoder for Codec {
                     ?self.state,
                     ?magic,
                     command = ?command,
-                    // command = %String::from_utf8(
-                    //     command.iter()
-                    //         .cloned()
-                    //         .flat_map(std::ascii::escape_default)
-                    //         .collect()
-                    // ).unwrap(),
                     body_len,
                     ?checksum,
                     "read header from src buffer"
@@ -327,7 +321,7 @@ impl Decoder for Codec {
                 // Now that we know we have the full body, split off the body,
                 // and reset the decoder state for the next message. Otherwise
                 // we will attempt to read the next header as the current body.
-                let body = src.split_to(body_len);
+                let mut body = src.split_to(body_len);
                 self.state = DecodeState::Head;
 
                 if checksum != sha256d::Checksum::from(&body[..]) {
@@ -352,7 +346,7 @@ impl Decoder for Codec {
                         <Vec<InventoryHash>>::bitcoin_deserialize(&mut body_reader)?,
                     ),
                     Command::Block => {
-                        Message::Block(<Arc<block::Block>>::bitcoin_deserialize(&mut body_reader)?)
+                        Message::Block(Arc::new(block::Block::deserialize_from_buf(&mut body)?))
                     }
 
                     Command::GetHeaders => self.read_getheaders(&mut body_reader)?,

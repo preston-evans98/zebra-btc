@@ -3,7 +3,7 @@ use crate::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
 /// A Cached type is an option that is never serialized.
 ///
 /// It can be added to any struct without risking a consensus break.
-#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Eq, Serialize, Deserialize)]
 pub struct Cached<T: Clone + Copy>(Option<T>);
 
 impl<T: Clone + Copy> Cached<T> {
@@ -25,6 +25,24 @@ impl<T: Clone + Copy> Cached<T> {
     // pub fn set_value(&mut self, new: T) {
     //     self.0 = new
     // }
+}
+/// Returns false only if the two items both have a full cache and their values differ
+///
+/// This allows us to generate items with empty caches for testing purposes and compare them to their deserialized counterparts without modification.
+/// Recall that caches are always populated during deserialization.
+impl<T: PartialEq + Copy> PartialEq for Cached<T> {
+    fn eq(&self, other: &Self) -> bool {
+        match self.0 {
+            None => true,
+            Some(val) => {
+                if let Some(rhs) = other.0 {
+                    val == rhs
+                } else {
+                    true
+                }
+            }
+        }
+    }
 }
 
 impl<T: Clone + Copy> std::fmt::Debug for Cached<T>

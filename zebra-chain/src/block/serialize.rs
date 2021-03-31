@@ -14,8 +14,8 @@
 
 /// The maximum size of a Bitcoin block, in bytes.
 ///
-/// After SegWit, this includes the size of the Witness structure
-pub const MAX_BLOCK_BYTES: u64 = 4_000_000;
+/// This excludes the size of the Witness structure
+pub const MAX_BLOCK_BYTES: u64 = 1_000_000;
 
 // impl ZcashSerialize for Header {
 //     fn zcash_serialize<W: io::Write>(&self, mut writer: W) -> Result<(), io::Error> {

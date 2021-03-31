@@ -17,7 +17,7 @@ use std::{fmt, io::Read, iter::FromIterator, sync::Arc};
 
 use crate::compactint::CompactInt;
 use crate::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
-use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
+use bitcoin_serde_derive::BtcSerialize;
 use bytes::{Buf, BytesMut};
 pub use hash::Hash;
 pub use header::BlockTimeError;
@@ -31,12 +31,31 @@ use crate::{fmt::DisplayToDebug, transaction::Transaction, transparent};
 use self::serialize::MAX_BLOCK_BYTES;
 
 /// A Bitcoin block, containing a header and a list of transactions.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, BtcSerialize, BtcDeserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, BtcSerialize)]
 pub struct Block {
     /// The block header, containing block metadata.
     pub header: Header,
     /// The block transactions.
     pub transactions: Vec<std::sync::Arc<Transaction>>,
+}
+
+/// Don't ever use this in production. Seriously.
+///
+/// Having this method makes testing easier. That's it.
+/// TODO: Refactor tests to remove this method. Then burn this method.
+impl BitcoinDeserialize for Block {
+    fn bitcoin_deserialize<R: Read>(reader: R) -> Result<Self, SerializationError>
+    where
+        Self: Sized,
+    {
+        let mut src = reader.bytes().map(|result| match result {
+            // For real. Look at this. Don't do this. Ever.
+            Err(_) => 0,
+            Ok(byte) => byte,
+        });
+        let mut src = BytesMut::from_iter(&mut src);
+        Block::deserialize_from_buf(&mut src)
+    }
 }
 
 impl fmt::Display for Block {
@@ -80,9 +99,9 @@ impl Block {
     /// 1. The block does not contain duplicate transactions
     /// 1. The transactions merkle-ize to the root in the block header
     pub fn deserialize_from_buf(src: &mut BytesMut) -> Result<Self, SerializationError> {
-        let header = Header::deserialize_from_buf(src.split_to(80))?;
+        let header = Header::deserialize_from_buf(src.split_to(Header::len()))?;
 
-        let mut src = src.reader().take(MAX_BLOCK_BYTES);
+        let mut src = src.reader().take(MAX_BLOCK_BYTES - Header::len() as u64);
         let tx_count = {
             let tx_count = CompactInt::bitcoin_deserialize(&mut src)?;
             tx_count.value()

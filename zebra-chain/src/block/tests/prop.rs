@@ -5,7 +5,7 @@ use proptest::{arbitrary::any, prelude::*, test_runner::Config};
 use zebra_test::prelude::*;
 
 use crate::serialization::{BitcoinDeserializeInto, BitcoinSerialize, SerializationError};
-use crate::{block, parameters::Network, LedgerState};
+use crate::{block, parameters::Network, transparent::Input::Coinbase, LedgerState};
 
 use super::super::{serialize::MAX_BLOCK_BYTES, *};
 
@@ -46,29 +46,19 @@ proptest! {
     // default. Set the PROPTEST_CASES env var to override this default.
     #![proptest_config(Config::with_cases(env::var("PROPTEST_CASES")
                                           .ok()
-                                          .and_then(|v| v.parse().ok())
+                                           .and_then(|v| v.parse().ok())
                                           .unwrap_or(16)))]
 
     #[test]
     fn block_roundtrip(block in any::<Block>(), network in any::<Network>()) {
         zebra_test::init();
-
         let bytes = block.bitcoin_serialize_to_vec()?;
         let bytes = &mut bytes.as_slice();
-
-        // // Check the root hash
-        // let root_hash = block.root_hash(network);
-        // if let Some(root_hash) = root_hash {
-        //     let root_hash_bytes = root_hash.to_bytes();
-        //     prop_assert_eq![block.header.root_bytes, root_hash_bytes];
-        // } else {
-        //     prop_assert_eq![block.coinbase_height(), None];
-        // }
 
         // Check the block size limit
         if bytes.len() <= MAX_BLOCK_BYTES as _ {
             // Check deserialization
-            let other_block = bytes.bitcoin_deserialize_into()?;
+            let other_block: Block = bytes.bitcoin_deserialize_into()?;
 
             prop_assert_eq![block, other_block];
         } else {
@@ -99,8 +89,9 @@ fn blocks_have_coinbase() -> Result<()> {
         })
         .prop_flat_map(Block::arbitrary_with);
 
-    proptest!(|(block in strategy)| {
-        let has_coinbase = block.coinbase_height().is_some();
+    proptest!(|(blk in strategy)| {
+        // let has_coinbase = block.coinbase_height().is_some();
+        let has_coinbase = blk.transactions[0].is_coinbase();
         prop_assert!(has_coinbase);
     });
 

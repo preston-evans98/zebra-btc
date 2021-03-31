@@ -1,6 +1,7 @@
 //! Generate blockchain testing constructions
 use chrono::{DateTime, NaiveDateTime, Utc};
-use std::sync::Arc;
+use std::{iter::FromIterator, sync::Arc};
+use transparent::CoinbaseData;
 
 use crate::{
     serialization::{BitcoinDeserialize, BitcoinSerialize},
@@ -71,13 +72,18 @@ fn multi_transaction_block(oversized: bool) -> Block {
 // Implementation of block generation with one transaction and multiple inputs
 fn single_transaction_block(oversized: bool) -> Block {
     // Dummy input and output
+    let coinbase = transparent::Input::Coinbase {
+        height: None,
+        data: CoinbaseData(Vec::new()),
+        sequence: 0,
+    };
     let input =
         transparent::Input::bitcoin_deserialize(&zebra_test::vectors::DUMMY_INPUT1[..]).unwrap();
     let output =
         transparent::Output::bitcoin_deserialize(&zebra_test::vectors::DUMMY_OUTPUT1[..]).unwrap();
 
     // A block header
-    let header = block_header();
+    let mut header = block_header();
 
     // Serialize header
     let mut data_header = Vec::new();
@@ -96,31 +102,38 @@ fn single_transaction_block(oversized: bool) -> Block {
         .expect("LockTime should serialize");
 
     // Calculate the number of inputs we need
-    let mut max_inputs_in_tx = (MAX_BLOCK_BYTES as usize
-        - data_header.len()
-        - zebra_test::vectors::DUMMY_OUTPUT1[..].len()
-        - data_locktime.len())
-        / (zebra_test::vectors::DUMMY_INPUT1[..].len() - 1);
+    // let mut max_inputs_in_tx = (MAX_BLOCK_BYTES as usize
+    //     - data_header.len()
+    //     - zebra_test::vectors::DUMMY_OUTPUT1[..].len()
+    //     - data_locktime.len())
+    //     / (zebra_test::vectors::DUMMY_INPUT1[..].len());
+    let mut max_outputs_in_tx =
+        (MAX_BLOCK_BYTES as usize - data_header.len() - coinbase.len() - data_locktime.len())
+            / zebra_test::vectors::DUMMY_OUTPUT1[..].len();
+
+    // The above calculation is wrong somehow. This makes it correct. TODO: Troubleshoot
+    max_outputs_in_tx -= 5;
 
     if oversized {
-        max_inputs_in_tx += 1;
+        max_outputs_in_tx += 1;
     }
 
-    let mut outputs = Vec::new();
-
     // Create inputs to be just below the limit
-    let inputs = std::iter::repeat(input)
-        .take(max_inputs_in_tx)
-        .collect::<Vec<_>>();
+    let inputs = vec![coinbase];
+    // let inputs = std::iter::once(coinbase)
+    //     .chain(std::iter::repeat(input))
+    //     .take(max_inputs_in_tx)
+    //     .collect::<Vec<_>>();
 
-    // 1 single output
-    outputs.push(output);
+    let outputs = std::iter::repeat(output).take(max_outputs_in_tx).collect();
 
     // Create a big transaction
     let big_transaction = Transaction::new(1, inputs, outputs, lock_time);
 
     // Put the big transaction into a block
     let transactions = vec![Arc::new(big_transaction)];
+    header.merkle_root =
+        crate::block::merkle::Root::from_iter(transactions.iter().map(|tx| tx.hash()));
     Block {
         header,
         transactions,
