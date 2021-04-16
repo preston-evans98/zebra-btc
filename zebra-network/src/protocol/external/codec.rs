@@ -620,8 +620,7 @@ mod tests {
 
         use tokio_util::codec::{FramedRead, FramedWrite};
 
-        // i know the above msg has a body of 85 bytes
-        let size = 85;
+        let size = zebra_test::vectors::DUMMY_TX1.len();
 
         // reducing the max size to body size - 1
         rt.block_on(async {

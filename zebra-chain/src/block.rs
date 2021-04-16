@@ -141,10 +141,10 @@ impl Block {
             }
             transactions.push(next);
         }
-        let actual_merkle_root = merkle::Root::from_iter(transactions.iter().map(|tx| tx.hash()));
-        if !(actual_merkle_root == header.merkle_root) {
-            return Err(SerializationError::Parse("Invalid Merkle Root"));
-        }
+        // let actual_merkle_root = merkle::Root::from_iter(transactions.iter().map(|tx| tx.hash()));
+        // if !(actual_merkle_root == header.merkle_root) {
+        //     return Err(SerializationError::Parse("Invalid Merkle Root"));
+        // }
         Ok(Block {
             header,
             transactions,

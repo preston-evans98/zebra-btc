@@ -32,15 +32,11 @@ mod magics {
 
 /// Bitcoin Addresses
 ///
-/// In Bitcoin a single byte is used for the version field identifying
-/// the address type. In Zcash two bytes are used. For addresses on
-/// the production network, this and the encoded length cause the first
-/// two characters of the Base58Check encoding to be fixed as “t3” for
-/// P2SH addresses, and as “t1” for P2PKH addresses. (This does not
-/// imply that a transparent Zcash address can be parsed identically
-/// to a Bitcoin address just by removing the “t”.)
+/// In Bitcoin a single byte is preprended to the hash to specify
+/// the address type. The result is then hashed with sha256d, the first four bytes
+/// of the output are appended as a checksum, and the result is Base58Check encoded
 ///
-/// https://zips.z.cash/protocol/protocol.pdf#transparentaddrencoding
+/// https://en.bitcoin.it/wiki/Base58Check_encoding
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum Address {
     /// P2SH (Pay to Script Hash) addresses
@@ -171,10 +167,17 @@ impl BitcoinDeserialize for Address {
 trait ToAddressWithNetwork {
     /// Convert `self` to an `Address`, given the current `network`.
     fn to_address(&self, network: Network) -> Address;
+    fn to_address_uncompressed(&self, network: Network) -> Address;
 }
 
 impl ToAddressWithNetwork for Script {
     fn to_address(&self, network: Network) -> Address {
+        Address::PayToScriptHash {
+            network,
+            script_hash: Address::hash_payload(&self.0[..]),
+        }
+    }
+    fn to_address_uncompressed(&self, network: Network) -> Address {
         Address::PayToScriptHash {
             network,
             script_hash: Address::hash_payload(&self.0[..]),
@@ -187,6 +190,13 @@ impl ToAddressWithNetwork for PublicKey {
         Address::PayToPublicKeyHash {
             network,
             pub_key_hash: Address::hash_payload(&self.serialize()[..]),
+        }
+    }
+
+    fn to_address_uncompressed(&self, network: Network) -> Address {
+        Address::PayToPublicKeyHash {
+            network,
+            pub_key_hash: Address::hash_payload(&self.serialize_uncompressed()[..]),
         }
     }
 }
@@ -256,33 +266,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn pubkey_mainnet() {
+    fn pubkey_mainnet_uncompressed() {
         zebra_test::init();
 
         let pub_key = PublicKey::from_slice(&[
-            3, 23, 183, 225, 206, 31, 159, 148, 195, 42, 67, 115, 146, 41, 248, 140, 11, 3, 51, 41,
-            111, 180, 110, 143, 114, 134, 88, 73, 198, 174, 52, 184, 78,
+            4, 80, 134, 58, 214, 74, 135, 174, 138, 47, 232, 60, 26, 241, 168, 64, 60, 181, 63, 83,
+            228, 134, 216, 81, 29, 173, 138, 4, 136, 126, 91, 35, 82, 44, 212, 112, 36, 52, 83,
+            162, 153, 250, 158, 119, 35, 119, 22, 16, 58, 188, 17, 161, 223, 56, 133, 94, 214, 242,
+            238, 24, 126, 156, 88, 43, 166,
         ])
         .expect("A PublicKey from slice");
 
-        let t_addr = pub_key.to_address(Network::Mainnet);
+        let t_addr = pub_key.to_address_uncompressed(Network::Mainnet);
 
-        assert_eq!(format!("{}", t_addr), "t1bmMa1wJDFdbc2TiURQP5BbBz6jHjUBuHq");
+        assert_eq!(format!("{}", t_addr), "16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM");
     }
 
     #[test]
-    fn pubkey_testnet() {
+    fn pubkey_testnet_uncompressed() {
         zebra_test::init();
 
         let pub_key = PublicKey::from_slice(&[
-            3, 23, 183, 225, 206, 31, 159, 148, 195, 42, 67, 115, 146, 41, 248, 140, 11, 3, 51, 41,
-            111, 180, 110, 143, 114, 134, 88, 73, 198, 174, 52, 184, 78,
+            4, 45, 115, 49, 52, 94, 13, 166, 171, 17, 37, 235, 57, 72, 138, 84, 42, 153, 35, 243,
+            28, 88, 92, 32, 17, 77, 33, 26, 159, 107, 201, 243, 191, 85, 209, 216, 67, 203, 124,
+            241, 211, 107, 50, 209, 203, 0, 210, 241, 64, 239, 2, 142, 114, 106, 25, 167, 102, 246,
+            202, 124, 239, 123, 149, 101, 131,
         ])
         .expect("A PublicKey from slice");
 
-        let t_addr = pub_key.to_address(Network::Testnet);
+        let t_addr = pub_key.to_address_uncompressed(Network::Testnet);
 
-        assert_eq!(format!("{}", t_addr), "tmTc6trRhbv96kGfA99i7vrFwb5p7BVFwc3");
+        assert_eq!(format!("{}", t_addr), "myfp2YcyYjksxmdfA74yEuBmaUgt9xWCot");
     }
 
     #[test]
