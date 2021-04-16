@@ -89,7 +89,7 @@ impl Default for Config {
     fn default() -> Config {
         // FIXME: Add BTC dns seeders
         let mainnet_peers: HashSet<String> = [
-            ""
+            "127.0.0.1:8333"
             // "dnsseed.z.cash:8233",
             // "dnsseed.str4d.xyz:8233",
             // "mainnet.seeder.zfnd.org:8233",
@@ -111,7 +111,8 @@ impl Default for Config {
         .collect();
 
         Config {
-            listen_addr: "0.0.0.0:8333"
+            // Fixme: should be 8333
+            listen_addr: "0.0.0.0:8433"
                 .parse()
                 .expect("Hardcoded address should be parseable"),
             network: Network::Mainnet,

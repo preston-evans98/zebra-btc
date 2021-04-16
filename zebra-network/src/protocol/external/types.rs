@@ -48,18 +48,20 @@ impl ProtocolVersion {
     pub fn min_for_upgrade(network: Network, network_upgrade: NetworkUpgrade) -> Self {
         // TODO: Should we reject earlier protocol versions during our initial
         //       sync? zcashd accepts 170_002 or later during its initial sync.
-        ProtocolVersion(match (network, network_upgrade) {
-            (_, Genesis) | (_, BeforeOverwinter) => 170_002,
-            (Testnet, Overwinter) => 170_003,
-            (Mainnet, Overwinter) => 170_005,
-            (_, Sapling) => 170_007,
-            (Testnet, Blossom) => 170_008,
-            (Mainnet, Blossom) => 170_009,
-            (Testnet, Heartwood) => 170_010,
-            (Mainnet, Heartwood) => 170_011,
-            (Testnet, Canopy) => 170_012,
-            (Mainnet, Canopy) => 170_013,
-        })
+        // ProtocolVersion(match (network, network_upgrade) {
+        //     (_, Genesis) | (_, BeforeOverwinter) => 170_002,
+        //     (Testnet, Overwinter) => 170_003,
+        //     (Mainnet, Overwinter) => 170_005,
+        //     (_, Sapling) => 170_007,
+        //     (Testnet, Blossom) => 170_008,
+        //     (Mainnet, Blossom) => 170_009,
+        //     (Testnet, Heartwood) => 170_010,
+        //     (Mainnet, Heartwood) => 170_011,
+        //     (Testnet, Canopy) => 170_012,
+        //     (Mainnet, Canopy) => 170_013,
+        // })
+        // FIXME: research version compatiibility
+        ProtocolVersion(1)
     }
 
     /// Returns the current minimum protocol version for `network` and `height`.

@@ -61,7 +61,7 @@ pub const TIMESTAMP_TRUNCATION_SECONDS: i64 = 30 * 60;
 ///
 /// [BIP 14]: https://github.com/bitcoin/bips/blob/master/bip-0014.mediawiki
 // XXX can we generate this from crate metadata?
-pub const USER_AGENT: &str = "/🦓Zebra🦓:1.0.0-alpha.1/";
+pub const USER_AGENT: &str = "/Zebra-BTC:1.0.0-alpha.1/";
 
 /// The Zcash network protocol version implemented by this crate, and advertised
 /// during connection setup.
@@ -71,7 +71,7 @@ pub const USER_AGENT: &str = "/🦓Zebra🦓:1.0.0-alpha.1/";
 ///
 /// The current protocol version typically changes before Mainnet and Testnet
 /// network upgrades.
-pub const CURRENT_VERSION: ProtocolVersion = ProtocolVersion(170_013);
+pub const CURRENT_VERSION: ProtocolVersion = ProtocolVersion(700015);
 
 /// The most recent bilateral consensus upgrade implemented by this crate.
 ///
@@ -121,9 +121,10 @@ pub const DNS_LOOKUP_TIMEOUT: Duration = Duration::from_secs(5);
 pub mod magics {
     use super::*;
     /// The production mainnet.
-    pub const MAINNET: Magic = Magic([0x24, 0xe9, 0x27, 0x64]);
+    pub const MAINNET: Magic = Magic([0xf9, 0xbe, 0xb4, 0xd9]);
+    // pub const MAINNET: Magic = Magic([0xD9, 0xB4, 0xBE, 0xF9]);
     /// The testnet.
-    pub const TESTNET: Magic = Magic([0xfa, 0x1a, 0xf9, 0xbf]);
+    pub const TESTNET: Magic = Magic([0x07, 0x09, 0x11, 0x0B]);
 }
 
 #[cfg(test)]

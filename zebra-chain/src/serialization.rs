@@ -117,11 +117,11 @@ impl BitcoinSerialize for DateTime<Utc> {
     where
         W: std::io::Write,
     {
-        let time_u32 = match u32::try_from(self.timestamp()) {
-            Ok(t) => t,
-            Err(_) => std::u32::MAX,
-        };
-        target.write_u32::<LittleEndian>(time_u32)
+        // let time_u32 = match u32::try_from() {
+        //     Ok(t) => t,
+        //     Err(_) => std::u32::MAX,
+        // };
+        target.write_i64::<LittleEndian>(self.timestamp())
     }
 }
 
