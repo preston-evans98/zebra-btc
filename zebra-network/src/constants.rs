@@ -71,7 +71,7 @@ pub const USER_AGENT: &str = "/Zebra-BTC:1.0.0-alpha.1/";
 ///
 /// The current protocol version typically changes before Mainnet and Testnet
 /// network upgrades.
-pub const CURRENT_VERSION: ProtocolVersion = ProtocolVersion(700015);
+pub const CURRENT_VERSION: ProtocolVersion = ProtocolVersion(70015);
 
 /// The most recent bilateral consensus upgrade implemented by this crate.
 ///
@@ -124,7 +124,7 @@ pub mod magics {
     pub const MAINNET: Magic = Magic([0xf9, 0xbe, 0xb4, 0xd9]);
     // pub const MAINNET: Magic = Magic([0xD9, 0xB4, 0xBE, 0xF9]);
     /// The testnet.
-    pub const TESTNET: Magic = Magic([0x07, 0x09, 0x11, 0x0B]);
+    pub const TESTNET: Magic = Magic([0x0B, 0x11, 0x09, 0x07]);
 }
 
 #[cfg(test)]
