@@ -82,7 +82,7 @@ impl BitcoinDeserialize for i64 {
 
 impl BitcoinDeserialize for DateTime<Utc> {
     fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<DateTime<Utc>> {
-        Ok(Utc.timestamp(reader.read_u32::<LittleEndian>()? as i64, 0))
+        Ok(Utc.timestamp(reader.read_i64::<LittleEndian>()?, 0))
     }
 }
 
@@ -108,6 +108,7 @@ impl BitcoinDeserialize for String {
         let len = CompactInt::bitcoin_deserialize(&mut reader)?.value() as usize;
         // Limit preallocation to about 1000 items since blind preallocation is a DOS vulnerability
         // TODO: Replace with SafeAllocate when specialization stabilizes
+        eprint!("agent_len: {}", len);
         let blind_alloc_limit = 1024;
         let mut buf = vec![0; std::cmp::min(len, blind_alloc_limit)];
         reader.read_exact(&mut buf)?;
