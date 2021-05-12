@@ -5,8 +5,9 @@ use chrono::{DateTime, Duration, Utc};
 use thiserror::Error;
 
 use crate::{
-    compactint::CompactInt, serialization::sha256d, BitcoinDeserialize, BitcoinSerialize,
-    SerializationError,
+    compactint::CompactInt,
+    serialization::{sha256d, SmallUnixTime},
+    BitcoinDeserialize, BitcoinSerialize, SerializationError,
 };
 use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
 
@@ -46,7 +47,7 @@ pub struct Header {
 
     /// The block timestamp is a Unix epoch time (UTC) when the miner
     /// started hashing the header (according to the miner).
-    pub time: DateTime<Utc>,
+    pub time: SmallUnixTime,
 
     /// An encoded version of the target threshold this block’s header
     /// hash must be less than or equal to, in the same nBits format
@@ -103,7 +104,7 @@ impl Header {
             version,
             previous_block_hash,
             merkle_root,
-            time,
+            time: SmallUnixTime(time),
             difficulty_threshold,
             nonce,
             hash: Cached::new(),
@@ -121,11 +122,11 @@ impl Header {
         let two_hours_in_the_future = now
             .checked_add_signed(Duration::hours(2))
             .expect("calculating 2 hours in the future does not overflow");
-        if self.time <= two_hours_in_the_future {
+        if self.time.0 <= two_hours_in_the_future {
             Ok(())
         } else {
             Err(BlockTimeError::InvalidBlockTime(
-                self.time,
+                self.time.0,
                 *height,
                 *hash,
                 two_hours_in_the_future,
@@ -163,7 +164,7 @@ impl Header {
             version: u32::bitcoin_deserialize(&mut src)?,
             previous_block_hash: Hash::bitcoin_deserialize(&mut src)?,
             merkle_root: merkle::Root::bitcoin_deserialize(&mut src)?,
-            time: <DateTime<Utc>>::bitcoin_deserialize(&mut src)?,
+            time: SmallUnixTime::bitcoin_deserialize(&mut src)?,
             difficulty_threshold: CompactDifficulty::bitcoin_deserialize(&mut src)?,
             nonce: u32::bitcoin_deserialize(&mut src)?,
             hash: Cached::from(own_hash),

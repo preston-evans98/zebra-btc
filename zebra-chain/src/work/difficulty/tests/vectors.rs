@@ -458,7 +458,8 @@ fn check_testnet_minimum_difficulty_block(height: block::Height) -> Result<(), R
         let time_gap = block
             .header
             .time
-            .signed_duration_since(previous_block.header.time);
+            .0
+            .signed_duration_since(previous_block.header.time.0);
 
         // zcashd requires a gap that's strictly greater than 6 times the target
         // threshold, but ZIP-205 and ZIP-208 are ambiguous. See bug #1276.

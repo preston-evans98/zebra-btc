@@ -13,7 +13,7 @@ mod arbitrary;
 #[cfg(test)]
 mod tests;
 
-use std::{fmt, io::Read, iter::FromIterator, sync::Arc};
+use std::{convert::TryInto, fmt, io::Read, iter::FromIterator, sync::Arc};
 
 use crate::compactint::CompactInt;
 use crate::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
@@ -115,32 +115,24 @@ impl Block {
         if tx_count == 0 {
             return Err(SerializationError::Parse("Block contains no transactions"));
         }
-
-        // Deserialize and structurally validate Coinbase
-        let first_tx = <Arc<Transaction>>::bitcoin_deserialize(&mut src)?;
-        if !first_tx.is_coinbase() {
-            return Err(SerializationError::Parse(
-                "Block did not contain Coinbase in first position",
-            ));
-        }
-        // TODO: Parse block height
-        if header.version >= 2 {}
         // Sanity check number of transactions to prevent DOS attacks
-        if tx_count > MAX_BLOCK_BYTES / (36 * 4) {
+        else if tx_count > MAX_BLOCK_BYTES / (36 * 4) {
             return Err(SerializationError::Parse(
                 "Block contained too many transactions for each to have at least one input",
             ));
         }
-        let mut transactions = Vec::with_capacity(tx_count as usize);
-        transactions.push(first_tx);
+        let mut transactions = Vec::with_capacity(
+            tx_count
+                .try_into()
+                .expect("usize::min must be greater than MAX_BLOCK_BYTES / (36 * 4)"),
+        );
+
+        // TODO: Parse block height
+        if header.version >= 2 {}
 
         // Parse and validate remaining transactions
-        for _ in 1..tx_count {
-            let next = <Arc<Transaction>>::bitcoin_deserialize(&mut src)?;
-            if next.is_coinbase() {
-                return Err(SerializationError::Parse("Block contained second Coinbase"));
-            }
-            transactions.push(next);
+        for _ in 0..tx_count {
+            transactions.push(<Arc<Transaction>>::bitcoin_deserialize(&mut src)?);
         }
         // let actual_merkle_root = merkle::Root::from_iter(transactions.iter().map(|tx| tx.hash()));
         // if !(actual_merkle_root == header.merkle_root) {

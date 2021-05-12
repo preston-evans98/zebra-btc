@@ -4,7 +4,7 @@ use std::{iter::FromIterator, sync::Arc};
 use transparent::CoinbaseData;
 
 use crate::{
-    serialization::{BitcoinDeserialize, BitcoinSerialize},
+    serialization::{BitcoinDeserialize, BitcoinSerialize, SmallUnixTime},
     transaction::{LockTime, Transaction},
     transparent,
 };
@@ -110,10 +110,10 @@ fn single_transaction_block(oversized: bool) -> Block {
         .expect("Block header should serialize");
 
     // Serialize a LockTime
-    let lock_time = LockTime::Time(DateTime::<Utc>::from_utc(
+    let lock_time = LockTime::Time(SmallUnixTime(DateTime::<Utc>::from_utc(
         NaiveDateTime::from_timestamp(61, 0),
         Utc,
-    ));
+    )));
     let mut data_locktime = Vec::new();
     lock_time
         .bitcoin_serialize(&mut data_locktime)

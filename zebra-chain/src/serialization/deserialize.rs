@@ -1,4 +1,4 @@
-use super::CompactInt;
+use super::{BigUnixTime, CompactInt, SmallUnixTime};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use chrono::{DateTime, TimeZone, Utc};
 use std::net::{Ipv6Addr, SocketAddr};
@@ -80,9 +80,18 @@ impl BitcoinDeserialize for i64 {
     }
 }
 
-impl BitcoinDeserialize for DateTime<Utc> {
-    fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<DateTime<Utc>> {
-        Ok(Utc.timestamp(reader.read_i64::<LittleEndian>()?, 0))
+impl BitcoinDeserialize for SmallUnixTime {
+    fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<Self> {
+        Ok(SmallUnixTime(
+            Utc.timestamp(reader.read_u32::<LittleEndian>()? as i64, 0),
+        ))
+    }
+}
+impl BitcoinDeserialize for BigUnixTime {
+    fn bitcoin_deserialize<R: io::Read>(mut reader: R) -> Result<Self> {
+        Ok(BigUnixTime(
+            Utc.timestamp(reader.read_i64::<LittleEndian>()?, 0),
+        ))
     }
 }
 

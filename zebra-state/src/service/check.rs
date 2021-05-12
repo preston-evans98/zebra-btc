@@ -72,7 +72,7 @@ where
     let relevant_data = relevant_chain.iter().map(|block| {
         (
             block.borrow().header.difficulty_threshold,
-            block.borrow().header.time,
+            block.borrow().header.time.0,
         )
     });
     let difficulty_adjustment =

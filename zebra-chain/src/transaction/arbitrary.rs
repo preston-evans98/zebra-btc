@@ -4,7 +4,7 @@ use block::Height;
 use chrono::{TimeZone, Utc};
 use proptest::{arbitrary::any, collection::vec, prelude::*};
 
-use crate::{block, parameters::NetworkUpgrade, transparent};
+use crate::{block, parameters::NetworkUpgrade, serialization::SmallUnixTime, transparent};
 use crate::{cached::Cached, LedgerState};
 
 use super::{LockTime, Memo, Transaction};
@@ -89,7 +89,7 @@ impl Arbitrary for LockTime {
             (block::Height::MIN.0..=block::Height::MAX.0)
                 .prop_map(|n| LockTime::Height(block::Height(n))),
             (LockTime::MIN_TIMESTAMP..=LockTime::MAX_TIMESTAMP)
-                .prop_map(|n| { LockTime::Time(Utc.timestamp(n as i64, 0)) })
+                .prop_map(|n| { LockTime::Time(SmallUnixTime(Utc.timestamp(n as i64, 0))) })
         ]
         .boxed()
     }

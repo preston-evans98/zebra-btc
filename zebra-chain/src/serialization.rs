@@ -33,6 +33,13 @@ use crate::compactint::CompactInt;
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
 use std::net::IpAddr;
 
+/// A 32-bit unix timestamp.
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Debug)]
+pub struct SmallUnixTime(pub DateTime<Utc>);
+/// A 64-bit unix timestamp
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Debug)]
+pub struct BigUnixTime(pub DateTime<Utc>);
+
 pub trait BitcoinSerialize {
     // fn bitcoin_serialize(&self, target: &mut Vec<u8>);
     fn bitcoin_serialize<W: std::io::Write>(&self, target: W) -> Result<(), std::io::Error>;
@@ -112,16 +119,24 @@ impl BitcoinSerialize for i64 {
     }
 }
 
-impl BitcoinSerialize for DateTime<Utc> {
+impl BitcoinSerialize for SmallUnixTime {
     fn bitcoin_serialize<W>(&self, mut target: W) -> Result<(), std::io::Error>
     where
         W: std::io::Write,
     {
-        // let time_u32 = match u32::try_from() {
-        //     Ok(t) => t,
-        //     Err(_) => std::u32::MAX,
-        // };
-        target.write_i64::<LittleEndian>(self.timestamp())
+        let time_u32 = match u32::try_from(self.0.timestamp()) {
+            Ok(t) => t,
+            Err(_) => std::u32::MAX,
+        };
+        target.write_u32::<LittleEndian>(time_u32)
+    }
+}
+impl BitcoinSerialize for BigUnixTime {
+    fn bitcoin_serialize<W>(&self, mut target: W) -> Result<(), std::io::Error>
+    where
+        W: std::io::Write,
+    {
+        target.write_i64::<LittleEndian>(self.0.timestamp())
     }
 }
 

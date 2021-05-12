@@ -4,7 +4,9 @@ use bitcoin_serde_derive::{BtcDeserialize, BtcSerialize};
 use chrono::{DateTime, TimeZone, Utc};
 use std::net;
 use std::net::SocketAddr;
-use zebra_chain::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
+use zebra_chain::{
+    serialization::BigUnixTime, BitcoinDeserialize, BitcoinSerialize, SerializationError,
+};
 
 use zebra_chain::block;
 
@@ -25,7 +27,7 @@ pub struct Version {
     pub services: PeerServices,
 
     /// The time when the version message was sent.
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: BigUnixTime,
 
     /// The network address of the node receiving this message, and its
     /// advertised network services.
@@ -72,7 +74,7 @@ impl Version {
         Version {
             version,
             services: our_services,
-            timestamp: timestamp,
+            timestamp: BigUnixTime(timestamp),
             address_recv: (their_services, their_ip),
             address_from: (our_services, our_ip),
             nonce,

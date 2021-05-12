@@ -3,11 +3,11 @@ use std::io::{Cursor, Write};
 
 use chrono::{DateTime, Duration, LocalResult, TimeZone, Utc};
 
-use crate::transaction::LockTime;
 use crate::{
     parameters::Network,
     serialization::{sha256d, BitcoinDeserialize, BitcoinDeserializeInto, BitcoinSerialize},
 };
+use crate::{serialization::SmallUnixTime, transaction::LockTime};
 
 use super::super::{serialize::MAX_BLOCK_BYTES, *};
 use super::generate; // XXX this should be rewritten as strategies
@@ -236,7 +236,7 @@ fn node_time_check(
     now: DateTime<Utc>,
 ) -> Result<(), BlockTimeError> {
     let mut header = generate::block_header();
-    header.time = block_header_time;
+    header.time = SmallUnixTime(block_header_time);
     // pass a zero height and hash - they are only used in the returned error
     header.time_is_valid_at(now, &Height(0), &Hash([0; 32]))
 }

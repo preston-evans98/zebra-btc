@@ -29,6 +29,10 @@ proptest! {
         prop_assert_eq!(hash, parsed);
     }
 
+}
+proptest! {
+    #![proptest_config(Config::with_cases(1000))]
+
     #[test]
     fn blockheader_roundtrip(header in any::<Header>()) {
         zebra_test::init();

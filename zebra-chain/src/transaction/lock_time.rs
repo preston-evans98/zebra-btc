@@ -3,8 +3,8 @@ use std::io;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use chrono::{DateTime, TimeZone, Utc};
 
-use crate::block;
 use crate::serialization::{BitcoinDeserialize, BitcoinSerialize, SerializationError};
+use crate::{block, serialization::SmallUnixTime};
 
 /// A Bitcoin-style `locktime`, representing either a block height or an epoch
 /// time.
@@ -22,7 +22,7 @@ pub enum LockTime {
     /// Unlock at a particular block height.
     Height(block::Height),
     /// Unlock at a particular time.
-    Time(DateTime<Utc>),
+    Time(SmallUnixTime),
 }
 
 impl LockTime {
@@ -44,7 +44,7 @@ impl LockTime {
     // When `Utc.timestamp` stabilises as a const function, we can make this a
     // const function.
     pub fn min_lock_time() -> LockTime {
-        LockTime::Time(Utc.timestamp(Self::MIN_TIMESTAMP, 0))
+        LockTime::Time(SmallUnixTime(Utc.timestamp(Self::MIN_TIMESTAMP, 0)))
     }
 
     /// Returns the maximum LockTime::Time, as a LockTime.
@@ -54,7 +54,7 @@ impl LockTime {
     // When `Utc.timestamp` stabilises as a const function, we can make this a
     // const function.
     pub fn max_lock_time() -> LockTime {
-        LockTime::Time(Utc.timestamp(Self::MAX_TIMESTAMP, 0))
+        LockTime::Time(SmallUnixTime(Utc.timestamp(Self::MAX_TIMESTAMP, 0)))
     }
 }
 
@@ -65,7 +65,7 @@ impl BitcoinSerialize for LockTime {
         // we can always compute a hash of a transaction object.
         match self {
             LockTime::Height(block::Height(n)) => writer.write_u32::<LittleEndian>(*n)?,
-            LockTime::Time(t) => writer.write_u32::<LittleEndian>(t.timestamp() as u32)?,
+            LockTime::Time(t) => writer.write_u32::<LittleEndian>(t.0.timestamp() as u32)?,
         }
         Ok(())
     }
@@ -77,7 +77,7 @@ impl BitcoinDeserialize for LockTime {
         if n <= block::Height::MAX.0 {
             Ok(LockTime::Height(block::Height(n)))
         } else {
-            Ok(LockTime::Time(Utc.timestamp(n as i64, 0)))
+            Ok(LockTime::Time(SmallUnixTime(Utc.timestamp(n as i64, 0))))
         }
     }
 }
