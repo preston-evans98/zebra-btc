@@ -71,7 +71,7 @@ pub const USER_AGENT: &str = "/Zebra-BTC:1.0.0-alpha.1/";
 ///
 /// The current protocol version typically changes before Mainnet and Testnet
 /// network upgrades.
-pub const CURRENT_VERSION: ProtocolVersion = ProtocolVersion(70015);
+pub const CURRENT_VERSION: ProtocolVersion = ProtocolVersion(70013);
 
 /// The most recent bilateral consensus upgrade implemented by this crate.
 ///
