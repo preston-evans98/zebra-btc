@@ -435,6 +435,7 @@ where
                 error_slot: slot,
                 peer_tx,
                 request_timer: None,
+                sendheaders: false,
             };
 
             tokio::spawn(

@@ -15,11 +15,11 @@ use futures::{
     stream::Stream,
 };
 use tokio::time::{sleep, Sleep};
-use tower::Service;
+use tower::{load_shed::error::Overloaded, Service, ServiceExt};
 use tracing_futures::Instrument;
 
 use zebra_chain::{
-    block::{self, Block},
+    block::{self, Block, CountedHeader},
     serialization::SerializationError,
     transaction::{self, Transaction},
 };
@@ -71,7 +71,7 @@ impl Handler {
     /// contents to responses without additional copies.  If the message is not
     /// interpretable as a response, we return ownership to the caller.
     ///
-    /// Unexpected messages are left unprocessed, and may be rejected later.
+    /// Unexpected messages are left unprocessed and may be rejected later unless
     fn process_message(&mut self, msg: Message) -> Option<Message> {
         let mut ignored_msg = None;
         // XXX can this be avoided?
@@ -336,6 +336,10 @@ pub struct Connection<S, Tx> {
     pub(super) error_slot: ErrorSlot,
     //pub(super) peer_rx: Rx,
     pub(super) peer_tx: Tx,
+    /// A boolean flag indicating whether the remote peer has sent a `SendHeaders` message.
+    /// If this flag is set, we should advertise blocks with `Headers` messages instead of
+    /// `Inv` messages. https://developer.bitcoin.org/reference/p2p_networking.html#sendheaders
+    pub(super) sendheaders: bool,
 }
 
 impl<S, Tx> Connection<S, Tx>
@@ -722,7 +726,21 @@ where
                 }
             }
             (AwaitingRequest, AdvertiseBlock(hash)) => {
-                match self.peer_tx.send(Message::Inv(vec![hash.into()])).await {
+                let msg = match self.sendheaders {
+                  false => Message::Inv(vec![hash.into()]),
+                  true =>  {
+                    match self.get_header_for_block(hash).await {
+                        Ok(headers) => Message::Headers(headers),
+                        Err(e) => {
+                            let e = SharedPeerError::from(e);
+                            let _ = tx.send(Err(e.clone()));
+                            self.fail_with(e);
+                            return;
+                        }
+                    } 
+                  }
+                };
+                match self.peer_tx.send(msg).await {
                     Ok(()) => Ok((AwaitingRequest, Some(tx))),
                     Err(e) => Err((e, tx)),
                 }
@@ -856,13 +874,33 @@ where
                 }
             },
             Message::GetAddr => Request::Peers,
-            // FIXME: implement
-            // Message::GetBlocks { known_blocks, stop } => Request::FindBlocks { known_blocks, stop },
-            // Message::GetHeaders { known_blocks, stop } => {
-            //     Request::FindHeaders { known_blocks, stop }
-            // }
+            Message::GetBlocks(inner) => Request::FindBlocks {
+                known_blocks: inner.block_header_hashes,
+                stop: inner.stop_hash,
+            },
+            Message::GetHeaders(inner) => Request::FindHeaders {
+                known_blocks: inner.block_header_hashes,
+                stop: inner.stop_hash,
+            },
             Message::Mempool => Request::MempoolTransactions,
-            _ => todo!(),
+            Message::MerkleBlock(_) => {
+                todo!()
+            }
+            Message::CompactBlock(_) => {
+                todo!()
+            }
+            Message::GetBlockTxn(_) => todo!(),
+            Message::BlockTxn(_) => todo!(),
+            Message::SendCompact(_) => {
+                todo!()
+            }
+            Message::FeeFilter(_) => {
+                todo!()
+            }
+            Message::SendHeaders => {
+                self.sendheaders = true;
+                return;
+            }
         };
 
         self.drive_peer_request(req).await
@@ -951,6 +989,39 @@ where
                     self.fail_with(e)
                 }
             }
+        }
+    }
+    /// Use the internal svc to convert a block hash to a block Header. 
+    ///
+    /// Treats all service errors as PeerError::Overloaded
+    async fn get_header_for_block(&mut self, hash: block::Hash) -> Result<Vec<CountedHeader>, PeerError> {
+        if self.svc.ready_and().await.is_err() {
+            // TODO: treat `TryRecvError::Closed` in `Inbound::poll_ready` as a fatal error (#1655)
+            return Err(PeerError::Overloaded);
+        }
+        match self
+            .svc
+            .call(Request::FindHeaders {
+                known_blocks: vec![hash],
+                stop: Some(hash),
+            })
+            .await
+        {
+            Ok(Response::BlockHeaders(headers)) => return Ok(headers),
+            Ok(_) => unreachable!(
+                "Inbound service must return Response::Blockheaders in response to Request::FindHeaders"
+            ),
+            Err(e) => {
+                if !e.is::<Overloaded>() {
+                    // If the error isn't Overloaded, log it
+                    error!(%e,
+                        connection_state = ?self.state,
+                        client_receiver = ?self.client_rx,
+                        "error getting header for block with hash {}: {}", hash, e);
+                } 
+                return Err(PeerError::Overloaded)
+            },
+            
         }
     }
 }

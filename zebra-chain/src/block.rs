@@ -48,6 +48,7 @@ impl BitcoinDeserialize for Block {
     where
         Self: Sized,
     {
+        eprintln!("Using Block::bitcoin_deserialize is not safe! It can result in silent data corruption. Seriously, don't.");
         let mut src = reader.bytes().map(|result| match result {
             // For real. Look at this. Don't use this in production. Ever.
             Err(e) => panic!("Error deserializing block! {}", e),
