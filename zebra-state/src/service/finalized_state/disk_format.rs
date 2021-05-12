@@ -1,6 +1,7 @@
 //! Module defining exactly how to move types in and out of rocksdb
 use std::{convert::TryInto, fmt::Debug, sync::Arc};
 
+use bytes::BytesMut;
 use zebra_chain::{
     block,
     block::Block,
@@ -82,7 +83,7 @@ impl IntoDisk for Block {
 
 impl FromDisk for Block {
     fn from_bytes(bytes: impl AsRef<[u8]>) -> Self {
-        Block::bitcoin_deserialize(bytes.as_ref())
+        Block::deserialize_from_buf(&mut BytesMut::from(bytes.as_ref()))
             .expect("deserialization format should match the serialization format used by IntoDisk")
     }
 }

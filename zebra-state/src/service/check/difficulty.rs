@@ -90,6 +90,7 @@ impl AdjustedDifficulty {
     where
         C: IntoIterator<Item = (CompactDifficulty, DateTime<Utc>)>,
     {
+        // FIXME: This expectation is no longer valid
         let candidate_block_height = candidate_block
             .coinbase_height()
             .expect("semantically valid blocks have a coinbase height");
@@ -139,7 +140,7 @@ impl AdjustedDifficulty {
             .expect("not enough context: difficulty adjustment needs at least 28 (PoWAveragingWindow + PoWMedianBlockSpan) headers");
 
         AdjustedDifficulty {
-            candidate_time: candidate_header.time,
+            candidate_time: candidate_header.time.0,
             candidate_height,
             network,
             relevant_difficulty_thresholds,

@@ -4101,6 +4101,7 @@ dependencies = [
 name = "zebra-state"
 version = "1.0.0-alpha.1"
 dependencies = [
+ "bytes 0.6.0",
  "chrono",
  "color-eyre",
  "dirs",
