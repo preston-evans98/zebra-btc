@@ -10,6 +10,14 @@
 
 Zebra-BTC is a fork of [Zebra](https://zebra.zfnd.org/) the Zcash Foundation's implementation of the Zcash protocol. Zebra-BTC aims to be a performant, consensus compatible implementation of the Bitcoin Protocol. It is developed as part of the ongoing [Bitcoin Warp](https://bitcoinwarp.com/doc/warpd/index.html) project.
 
+## Roadmap
+
+1. Convert existing Zebra-network from Zcash to Bitcoin (done - compliant up to Protocol Version 70013)
+1. Convert existing Zebra-chain (block, tx, etc.) from Zcash to Bitcoin (in-progress)
+1. Convert existing Zebra-consensus from Zcash to Bitcoin (not started)
+1. Replace zebra-script with an external library (libbitcoin-kernel)
+1. Implement missing features including mempool and zebra-script
+
 ## Alpha Releases
 
 As we work towards our first Alpha release, here are the goals we aim to achieve:
@@ -79,11 +87,10 @@ tested its exact limits yet.
 
 `zebrad`'s typical network usage is:
 
-- initial sync: 30 GB download
-- ongoing updates: 10-50 MB upload and download per day, depending on peer requests
+- initial sync: 300+ GB download
+- ongoing updates: 50+ MB upload and download per day, depending on peer requests
 
-The major constraint we've found on `zebrad` performance is the network weather,
-especially the ability to make good connections to other Zcash network peers.
+The major constraint we've found on `zebrad` performance is the network weather.
 
 ### Alpha Release Features
 
@@ -95,23 +102,22 @@ Network:
 
 State:
 
-- persist block, transaction, UTXO, and nullifier indexes
+- persist block, transaction, and UTXOs
 - handle chain reorganizations
 
 Proof of Work:
 
-- validate equihash, block difficulty threshold, and difficulty adjustment
+- validate hash, block difficulty threshold, and difficulty adjustment
 - validate transaction merkle roots
 
 Validating proof of work increases the cost of creating a consensus split
 between `zebrad` and `bitcoind`.
 
-This release also implements some other Zcash consensus rules, to check that
+This release also implements some other Bitcoin consensus rules, to check that
 Zebra's [validation architecture](#architecture) supports future work on a
 full validating node:
 
 - block and transaction structure
-- checkpoint-based verification up to Sapling
 - transaction validation (incomplete)
 - transaction cryptography (incomplete)
 - transaction scripts (incomplete)
@@ -158,10 +164,10 @@ Performance and Reliability:
 
 ## Documentation
 
-The [Zebra website](https://zebra.zfnd.org/) contains user documentation for Zcash Zebra, most of which is applicable to Zebra-BTC as well, such
-as how to run or configure Zebra, set up metrics integrations, etc., as well as
-developer documentation, such as design documents. We also render [API
-documentation](https://doc.zebra.zfnd.org) for the external API of our crates,
+The [Zebra website](https://zebra.zfnd.org/) contains user documentation for Zcash Zebra, most of which is applicable to Zebra-BTC as well.
+These docs explain how to run or configure Zebra, set up metrics integrations, etc. THey also include
+developer documentation and as design documents. The Zcash Foundations also renders [API
+documentation](https://doc.zebra.zfnd.org) for the external API of Zebra's crates,
 as well as [internal documentation](https://doc-internal.zebra.zfnd.org) for
 private APIs.
 
@@ -204,10 +210,8 @@ into several components:
     isolated from all other node state. This can be used, for instance, to
     safely relay data over Tor, without revealing distinguishing information.
 
-- [`zebra-script`](https://doc.zebra.zfnd.org/zebra_script/index.html) provides
-  script validation. Currently, this is implemented by linking to the C++
-  script verification code from `zcashd`, but in the future we may implement a
-  pure-Rust script implementation.
+- [`zebra-script`](https://doc.zebra.zfnd.org/zebra_script/index.html) will provide
+  script validation. This will probably use libbitcoin-kernel.
 
 - [`zebra-consensus`](https://doc.zebra.zfnd.org/zebra_consensus/index.html)
   performs [_semantic validation_](https://zebra.zfnd.org/dev/rfcs/0002-parallel-verification.html#verification-stages)
@@ -223,16 +227,16 @@ into several components:
   service is responsible for [_contextual verification_](https://zebra.zfnd.org/dev/rfcs/0002-parallel-verification.html#verification-stages):
   all consensus rules
   that check whether a new block is a valid extension of an existing chain,
-  such as updating the nullifier set or checking that transaction inputs remain
+  such checking that transaction inputs remain
   unspent.
 
 - [`zebrad`](https://doc.zebra.zfnd.org/zebrad/index.html) contains the full
   node, which connects these components together and implements logic to handle
   inbound requests from peers and the chain sync process.
 
-- `zebra-rpc` and `zebra-client` will eventually contain the RPC and wallet
+- `zebra-rpc` will eventually contain the RPC
   functionality, but as mentioned above, our goal is to implement replication
-  of chain state first before asking users to entrust Zebra with their funds.
+  of chain state first.
 
 All of these components can be reused as independent libraries, and all
 communication between stateful components is handled internally by
