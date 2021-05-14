@@ -16,27 +16,38 @@ use chrono::{DateTime, Duration, Utc};
 /// incompatible ways.
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum NetworkUpgrade {
-    /// The Zcash protocol for a Genesis block.
-    ///
-    /// Zcash genesis blocks use a different set of consensus rules from
-    /// other BeforeOverwinter blocks, so we treat them like a separate network
-    /// upgrade.
+    /// The Bitcoin protocol at the Genesis block, before any softforks had been implemented.
     Genesis,
-    /// The Zcash protocol before the Overwinter upgrade.
-    ///
-    /// We avoid using `Sprout`, because the specification says that Sprout
-    /// is the name of the pre-Sapling protocol, before and after Overwinter.
-    BeforeOverwinter,
-    /// The Zcash protocol after the Overwinter upgrade.
-    Overwinter,
-    /// The Zcash protocol after the Sapling upgrade.
-    Sapling,
-    /// The Zcash protocol after the Blossom upgrade.
-    Blossom,
-    /// The Zcash protocol after the Heartwood upgrade.
-    Heartwood,
-    /// The Zcash protocol after the Canopy upgrade.
-    Canopy,
+    /// [`BIP 34`](https://github.com/bitcoin/bips/blob/master/bip-0034.mediawiki):
+    /// The rule that requires blocks to contain their height (number) in the coinbase input,
+    /// and the introduction of version 2 blocks has been implemented since core **v0.7.0**.
+    /// The rule took effect for version 2 blocks as of *block 224413* (March 5th 2013),
+    /// and version 1 blocks are no longer allowed since *block 227931* (March 25th 2013)
+    ///([PR #1526](https://github.com/bitcoin/bitcoin/pull/1526)).
+    BIP34,
+    /// [`BIP 66`](https://github.com/bitcoin/bips/blob/master/bip-0066.mediawiki):
+    /// The strict DER rules and associated version 3 blocks have been implemented since core **v0.10.0**
+    ///([PR #5713](https://github.com/bitcoin/bitcoin/pull/5713)).
+    BIP66,
+    /// [`BIP 65`](https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki):
+    /// The CHECKLOCKTIMEVERIFY softfork was merged in bitcoin core **v0.12.0**
+    /// ([PR #6351](https://github.com/bitcoin/bitcoin/pull/6351)), and backported
+    // to **v0.11.2** and **v0.10.4**.
+    /// Mempool-only CLTV was added in [PR #6124](https://github.com/bitcoin/bitcoin/pull/6124).
+    BIP65,
+    /// [`BIP 112`](https://github.com/bitcoin/bips/blob/master/bip-0112.mediawiki):
+    /// The CHECKSEQUENCEVERIFY opcode has been implemented since **v0.12.1**
+    /// ([PR #7524](https://github.com/bitcoin/bitcoin/pull/7524)), and has been *buried* since core **v0.19.0**
+    /// ([PR #16060](https://github.com/bitcoin/bitcoin/pull/16060)).
+    CSV,
+    /// The Segregated Witness Network Upgrade creates a new data structure "the witness structure"
+    /// which is commmitted to in the coinbase transaction and contains only the witnesses (signatures, scripts, etc.) for
+    /// transactions. SegWit fixes transaction malleability and yields a defacto block size increase.
+    /// SegWit includes [`BIP 141`](https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki),
+    /// [`BIP 143`](https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki)
+    /// [`BIP 144`](https://github.com/bitcoin/bips/blob/master/bip-0144.mediawiki) and
+    /// [`BIP 145`](https://github.com/bitcoin/bips/blob/master/bip-0145.mediawiki)
+    SegWit,
 }
 
 /// Mainnet network upgrade activation heights.
@@ -45,12 +56,11 @@ pub enum NetworkUpgrade {
 /// do the uniqueness check in the unit tests.
 pub(crate) const MAINNET_ACTIVATION_HEIGHTS: &[(block::Height, NetworkUpgrade)] = &[
     (block::Height(0), Genesis),
-    (block::Height(1), BeforeOverwinter),
-    (block::Height(347_500), Overwinter),
-    (block::Height(419_200), Sapling),
-    (block::Height(653_600), Blossom),
-    (block::Height(903_000), Heartwood),
-    (block::Height(1_046_400), Canopy),
+    (block::Height(227931), BIP34), // 0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8;
+    (block::Height(363725), BIP66), // 00000000000000000379eaa19dce8c9b722d46ae6a57c2f1a988119488b50931
+    (block::Height(388381), BIP65), // 000000000000000004c2b624ed5d7756c508d90fd0da2c7c679febfa6c4735f0
+    (block::Height(419328), CSV), // 000000000000000004a1b34462cb8aeebd5799177f7a29cf28f2d1961716b5b5
+    (block::Height(481824), SegWit), // 0000000000000000001c8018d9cb3b742ef25114f27563e3fc4a1902167f9893
 ];
 
 /// Testnet network upgrade activation heights.
@@ -59,12 +69,11 @@ pub(crate) const MAINNET_ACTIVATION_HEIGHTS: &[(block::Height, NetworkUpgrade)] 
 /// do the uniqueness check in the unit tests.
 pub(crate) const TESTNET_ACTIVATION_HEIGHTS: &[(block::Height, NetworkUpgrade)] = &[
     (block::Height(0), Genesis),
-    (block::Height(1), BeforeOverwinter),
-    (block::Height(207_500), Overwinter),
-    (block::Height(280_000), Sapling),
-    (block::Height(584_000), Blossom),
-    (block::Height(903_800), Heartwood),
-    (block::Height(1_028_500), Canopy),
+    (block::Height(21111), BIP34), // 0x0000000023b3a96d3484e5abb3755c413e7d41500f8e2a5c3f0dd01299cd8ef8
+    (block::Height(330776), BIP66), // 000000002104c8c45e99a8853285a3b592602a3ccde2b832481da85e9e4ba182
+    (block::Height(581885), BIP65), // 00000000007f6655f22f98e72ed80d8b06dc761d5da09df0fa1dc4be4f861eb6
+    (block::Height(770112), CSV), // 00000000025e930139bac5c6c31a403776da130831ab85be56578f3fa75369bb
+    (block::Height(834624), SegWit), // 00000000002b980fcd729daaa248fd9316a5200e9b367f4ff2c42453e84201ca
 ];
 
 /// The Consensus Branch Id, used to bind transactions and blocks to a
@@ -78,23 +87,23 @@ impl From<ConsensusBranchId> for u32 {
     }
 }
 
-/// Network Upgrade Consensus Branch Ids.
-///
-/// Branch ids are the same for mainnet and testnet. If there is a testnet
-/// rollback after a bug, the branch id changes.
-///
-/// Branch ids were introduced in the Overwinter upgrade, so there are no
-/// Genesis or BeforeOverwinter branch ids.
-///
-/// This is actually a bijective map, but it is const, so we use a vector, and
-/// do the uniqueness check in the unit tests.
-pub(crate) const CONSENSUS_BRANCH_IDS: &[(NetworkUpgrade, ConsensusBranchId)] = &[
-    (Overwinter, ConsensusBranchId(0x5ba81b19)),
-    (Sapling, ConsensusBranchId(0x76b809bb)),
-    (Blossom, ConsensusBranchId(0x2bb40e60)),
-    (Heartwood, ConsensusBranchId(0xf5b9230b)),
-    (Canopy, ConsensusBranchId(0xe9ff75a6)),
-];
+// /// Network Upgrade Consensus Branch Ids.
+// ///
+// /// Branch ids are the same for mainnet and testnet. If there is a testnet
+// /// rollback after a bug, the branch id changes.
+// ///
+// /// Branch ids were introduced in the Overwinter upgrade, so there are no
+// /// Genesis or BeforeOverwinter branch ids.
+// ///
+// /// This is actually a bijective map, but it is const, so we use a vector, and
+// /// do the uniqueness check in the unit tests.
+// pub(crate) const CONSENSUS_BRANCH_IDS: &[(NetworkUpgrade, ConsensusBranchId)] = &[
+//     (Overwinter, ConsensusBranchId(0x5ba81b19)),
+//     (Sapling, ConsensusBranchId(0x76b809bb)),
+//     (Blossom, ConsensusBranchId(0x2bb40e60)),
+//     (Heartwood, ConsensusBranchId(0xf5b9230b)),
+//     (Canopy, ConsensusBranchId(0xe9ff75a6)),
+// ];
 
 /// The target block spacing before Blossom.
 const PRE_BLOSSOM_POW_TARGET_SPACING: i64 = 150;
@@ -173,44 +182,44 @@ impl NetworkUpgrade {
             .next()
     }
 
-    /// Returns a BTreeMap of NetworkUpgrades and their ConsensusBranchIds.
-    ///
-    /// Branch ids are the same for mainnet and testnet.
-    ///
-    /// If network upgrade does not have a branch id, that network upgrade does
-    /// not appear in the list.
-    ///
-    /// This is actually a bijective map.
-    pub(crate) fn branch_id_list() -> HashMap<NetworkUpgrade, ConsensusBranchId> {
-        CONSENSUS_BRANCH_IDS.iter().cloned().collect()
-    }
+    // /// Returns a BTreeMap of NetworkUpgrades and their ConsensusBranchIds.
+    // ///
+    // /// Branch ids are the same for mainnet and testnet.
+    // ///
+    // /// If network upgrade does not have a branch id, that network upgrade does
+    // /// not appear in the list.
+    // ///
+    // /// This is actually a bijective map.
+    // pub(crate) fn branch_id_list() -> HashMap<NetworkUpgrade, ConsensusBranchId> {
+    //     CONSENSUS_BRANCH_IDS.iter().cloned().collect()
+    // }
 
-    /// Returns the consensus branch id for this network upgrade.
-    ///
-    /// Returns None if this network upgrade has no consensus branch id.
-    pub fn branch_id(&self) -> Option<ConsensusBranchId> {
-        NetworkUpgrade::branch_id_list().get(&self).cloned()
-    }
+    // /// Returns the consensus branch id for this network upgrade.
+    // ///
+    // /// Returns None if this network upgrade has no consensus branch id.
+    // pub fn branch_id(&self) -> Option<ConsensusBranchId> {
+    //     NetworkUpgrade::branch_id_list().get(&self).cloned()
+    // }
 
-    /// Returns the target block spacing for the network upgrade.
-    ///
-    /// Based on `PRE_BLOSSOM_POW_TARGET_SPACING` and
-    /// `POST_BLOSSOM_POW_TARGET_SPACING` from the Zcash specification.
-    pub fn target_spacing(&self) -> Duration {
-        let spacing_seconds = match self {
-            Genesis | BeforeOverwinter | Overwinter | Sapling => PRE_BLOSSOM_POW_TARGET_SPACING,
-            Blossom | Heartwood | Canopy => POST_BLOSSOM_POW_TARGET_SPACING,
-        };
+    // /// Returns the target block spacing for the network upgrade.
+    // ///
+    // /// Based on `PRE_BLOSSOM_POW_TARGET_SPACING` and
+    // /// `POST_BLOSSOM_POW_TARGET_SPACING` from the Zcash specification.
+    // pub fn target_spacing(&self) -> Duration {
+    //     let spacing_seconds = match self {
+    //         Genesis | BeforeOverwinter | Overwinter | Sapling => PRE_BLOSSOM_POW_TARGET_SPACING,
+    //         Blossom | Heartwood | Canopy => POST_BLOSSOM_POW_TARGET_SPACING,
+    //     };
 
-        Duration::seconds(spacing_seconds)
-    }
+    //     Duration::seconds(spacing_seconds)
+    // }
 
-    /// Returns the target block spacing for `network` and `height`.
-    ///
-    /// See [`target_spacing()`] for details.
-    pub fn target_spacing_for_height(network: Network, height: block::Height) -> Duration {
-        NetworkUpgrade::current(network, height).target_spacing()
-    }
+    // /// Returns the target block spacing for `network` and `height`.
+    // ///
+    // /// See [`target_spacing()`] for details.
+    // pub fn target_spacing_for_height(network: Network, height: block::Height) -> Duration {
+    //     NetworkUpgrade::current(network, height).target_spacing()
+    // }
 
     /// Returns the minimum difficulty block spacing for `network` and `height`.
     /// Returns `None` if the testnet minimum difficulty consensus rule is not active.
