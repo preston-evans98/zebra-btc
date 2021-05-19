@@ -105,33 +105,15 @@ impl From<ConsensusBranchId> for u32 {
 //     (Canopy, ConsensusBranchId(0xe9ff75a6)),
 // ];
 
-/// The target block spacing before Blossom.
-const PRE_BLOSSOM_POW_TARGET_SPACING: i64 = 150;
+/// The target block spacing
+const POW_TARGET_SPACING: i64 = 10 * 60;
 
-/// The target block spacing after Blossom activation.
-const POST_BLOSSOM_POW_TARGET_SPACING: i64 = 75;
-
-/// The averaging window for difficulty threshold arithmetic mean calculations.
-///
-/// `PoWAveragingWindow` in the Zcash specification.
-pub const POW_AVERAGING_WINDOW: usize = 17;
+/// The number of blocks per averaging window for difficulty threshold arithmetic mean calculations.
+pub const POW_AVERAGING_WINDOW: usize = 2016;
 
 /// The multiplier used to derive the testnet minimum difficulty block time gap
 /// threshold.
-///
-/// Based on https://zips.z.cash/zip-0208#minimum-difficulty-blocks-on-the-test-network
-const TESTNET_MINIMUM_DIFFICULTY_GAP_MULTIPLIER: i32 = 6;
-
-/// The start height for the testnet minimum difficulty consensus rule.
-///
-/// Based on https://zips.z.cash/zip-0208#minimum-difficulty-blocks-on-the-test-network
-const TESTNET_MINIMUM_DIFFICULTY_START_HEIGHT: block::Height = block::Height(299_188);
-
-/// The activation height for the block maximum time rule on Testnet.
-///
-/// Part of the block header consensus rules in the Zcash specification at
-/// https://zips.z.cash/protocol/protocol.pdf#blockheader
-pub const TESTNET_MAX_TIME_START_HEIGHT: block::Height = block::Height(653_606);
+const TESTNET_MINIMUM_DIFFICULTY_GAP_MULTIPLIER: i32 = 2;
 
 impl NetworkUpgrade {
     /// Returns a BTreeMap of activation heights and network upgrades for
@@ -182,44 +164,19 @@ impl NetworkUpgrade {
             .next()
     }
 
-    // /// Returns a BTreeMap of NetworkUpgrades and their ConsensusBranchIds.
-    // ///
-    // /// Branch ids are the same for mainnet and testnet.
-    // ///
-    // /// If network upgrade does not have a branch id, that network upgrade does
-    // /// not appear in the list.
-    // ///
-    // /// This is actually a bijective map.
-    // pub(crate) fn branch_id_list() -> HashMap<NetworkUpgrade, ConsensusBranchId> {
-    //     CONSENSUS_BRANCH_IDS.iter().cloned().collect()
-    // }
+    /// Returns the target block spacing for the network upgrade.
+    pub fn target_spacing(&self) -> Duration {
+        match self {
+            Genesis | BIP34 | BIP66 | BIP65 | CSV | SegWit => Duration::seconds(POW_TARGET_SPACING),
+        }
+    }
 
-    // /// Returns the consensus branch id for this network upgrade.
-    // ///
-    // /// Returns None if this network upgrade has no consensus branch id.
-    // pub fn branch_id(&self) -> Option<ConsensusBranchId> {
-    //     NetworkUpgrade::branch_id_list().get(&self).cloned()
-    // }
-
-    // /// Returns the target block spacing for the network upgrade.
-    // ///
-    // /// Based on `PRE_BLOSSOM_POW_TARGET_SPACING` and
-    // /// `POST_BLOSSOM_POW_TARGET_SPACING` from the Zcash specification.
-    // pub fn target_spacing(&self) -> Duration {
-    //     let spacing_seconds = match self {
-    //         Genesis | BeforeOverwinter | Overwinter | Sapling => PRE_BLOSSOM_POW_TARGET_SPACING,
-    //         Blossom | Heartwood | Canopy => POST_BLOSSOM_POW_TARGET_SPACING,
-    //     };
-
-    //     Duration::seconds(spacing_seconds)
-    // }
-
-    // /// Returns the target block spacing for `network` and `height`.
-    // ///
-    // /// See [`target_spacing()`] for details.
-    // pub fn target_spacing_for_height(network: Network, height: block::Height) -> Duration {
-    //     NetworkUpgrade::current(network, height).target_spacing()
-    // }
+    /// Returns the target block spacing for `network` and `height`.
+    ///
+    /// See [`target_spacing()`] for details.
+    pub fn target_spacing_for_height(network: Network, height: block::Height) -> Duration {
+        NetworkUpgrade::current(network, height).target_spacing()
+    }
 
     /// Returns the minimum difficulty block spacing for `network` and `height`.
     /// Returns `None` if the testnet minimum difficulty consensus rule is not active.
@@ -233,7 +190,6 @@ impl NetworkUpgrade {
         height: block::Height,
     ) -> Option<Duration> {
         match (network, height) {
-            (Network::Testnet, height) if height < TESTNET_MINIMUM_DIFFICULTY_START_HEIGHT => None,
             (Network::Mainnet, _) => None,
             (Network::Testnet, _) => {
                 let network_upgrade = NetworkUpgrade::current(network, height);
@@ -292,25 +248,20 @@ impl NetworkUpgrade {
 
     /// Returns true if the maximum block time rule is active for `network` and `height`.
     ///
-    /// Always returns true if `network` is the Mainnet.
-    /// If `network` is the Testnet, the `height` should be at least
-    /// TESTNET_MAX_TIME_START_HEIGHT to return true.
-    /// Returns false otherwise.
-    ///
-    /// Part of the consensus rules at https://zips.z.cash/protocol/protocol.pdf#blockheader
+    /// Always returns true
     pub fn is_max_block_time_enforced(network: Network, height: block::Height) -> bool {
         match network {
             Network::Mainnet => true,
-            Network::Testnet => height >= TESTNET_MAX_TIME_START_HEIGHT,
+            Network::Testnet => true,
         }
     }
 }
 
-impl ConsensusBranchId {
-    /// Returns the current consensus branch id for `network` and `height`.
-    ///
-    /// Returns None if the network has no branch id at this height.
-    pub fn current(network: Network, height: block::Height) -> Option<ConsensusBranchId> {
-        NetworkUpgrade::current(network, height).branch_id()
-    }
-}
+// impl ConsensusBranchId {
+//     /// Returns the current consensus branch id for `network` and `height`.
+//     ///
+//     /// Returns None if the network has no branch id at this height.
+//     pub fn current(network: Network, height: block::Height) -> Option<ConsensusBranchId> {
+//         NetworkUpgrade::current(network, height).branch_id()
+//     }
+// }
