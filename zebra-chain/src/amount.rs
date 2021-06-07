@@ -331,10 +331,10 @@ impl Constraint for NonNegative {
     }
 }
 
-/// Number of zatoshis in 1 ZEC
+/// Number of satoshis in 1 BTC
 pub const COIN: i64 = 100_000_000;
 
-/// The maximum zatoshi amount.
+/// The maximum satoshi amount.
 pub const MAX_MONEY: i64 = 21_000_000 * COIN;
 
 /// A trait for defining constraints on `Amount`

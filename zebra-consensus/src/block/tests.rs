@@ -1,7 +1,5 @@
 //! Tests for block verification
 
-use crate::parameters::SLOW_START_INTERVAL;
-
 use super::*;
 
 use std::sync::Arc;
@@ -43,7 +41,7 @@ static INVALID_TIME_BLOCK_TRANSCRIPT: Lazy<Vec<(Arc<Block>, Result<block::Hash, 
             .checked_add_signed(chrono::Duration::hours(3))
             .ok_or_else(|| eyre!("overflow when calculating 3 hours in the future"))
             .unwrap();
-        block.header.time = three_hours_in_the_future;
+        block.header.time.0 = three_hours_in_the_future;
 
         vec![(Arc::new(block), Err(TransError::Any))]
     });
@@ -270,7 +268,7 @@ fn subsidy_is_valid_for_historical_blocks() -> Result<(), Report> {
     zebra_test::init();
 
     subsidy_is_valid_for_network(Network::Mainnet)?;
-    // subsidy_is_valid_for_network(Network::Testnet)?;
+    subsidy_is_valid_for_network(Network::Testnet)?;
 
     Ok(())
 }
@@ -286,12 +284,7 @@ fn subsidy_is_valid_for_network(network: Network) -> Result<(), Report> {
             .bitcoin_deserialize_into::<Block>()
             .expect("block is structurally valid");
 
-        // TODO: first halving, second halving, third halving, and very large halvings
-        if block::Height(height) > SLOW_START_INTERVAL
-            && block::Height(height) < NetworkUpgrade::Canopy.activation_height(network).unwrap()
-        {
-            check::subsidy_is_valid(&block, network).expect("subsidies should pass for this block");
-        }
+        check::subsidy_is_valid(&block, network).expect("subsidies should pass for this block");
     }
 
     Ok(())

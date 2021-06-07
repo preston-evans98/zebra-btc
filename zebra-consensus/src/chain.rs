@@ -15,7 +15,7 @@ use tracing::instrument;
 
 use zebra_chain::{
     block::{self, Block},
-    parameters::{Network, NetworkUpgrade::Sapling},
+    parameters::Network,
 };
 
 use zebra_state as zs;
