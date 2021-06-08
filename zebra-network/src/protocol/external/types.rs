@@ -128,8 +128,8 @@ mod proptest {
     fn magic_debug() {
         zebra_test::init();
 
-        assert_eq!(format!("{:?}", magics::MAINNET), "Magic(\"24e92764\")");
-        assert_eq!(format!("{:?}", magics::TESTNET), "Magic(\"fa1af9bf\")");
+        assert_eq!(format!("{:?}", magics::MAINNET), "Magic(\"d9b4bef9\")");
+        assert_eq!(format!("{:?}", magics::TESTNET), "Magic(\"0709110b\")");
     }
 
     proptest! {
@@ -164,14 +164,14 @@ mod test {
 
         assert_eq!(
             ProtocolVersion::current_min(network, block::Height(0)),
-            ProtocolVersion::min_for_upgrade(network, BeforeOverwinter),
+            ProtocolVersion::min_for_upgrade(network, Genesis),
         );
 
         // We assume that the last version we know about continues forever
         // (even if we suspect that won't be true)
         assert_ne!(
             ProtocolVersion::current_min(network, block::Height::MAX),
-            ProtocolVersion::min_for_upgrade(network, BeforeOverwinter),
+            ProtocolVersion::min_for_upgrade(network, Genesis),
         );
     }
 
@@ -191,17 +191,10 @@ mod test {
         zebra_test::init();
 
         let highest_network_upgrade = NetworkUpgrade::current(network, block::Height::MAX);
-        assert!(highest_network_upgrade == Canopy || highest_network_upgrade == Heartwood,
+        assert!(highest_network_upgrade == SegWit,
                 "expected coverage of all network upgrades: add the new network upgrade to the list in this test");
 
-        for &network_upgrade in &[
-            BeforeOverwinter,
-            Overwinter,
-            Sapling,
-            Blossom,
-            Heartwood,
-            Canopy,
-        ] {
+        for &network_upgrade in &[Genesis, BIP34, BIP66, BIP65, CSV, SegWit] {
             let height = network_upgrade.activation_height(network);
             if let Some(height) = height {
                 assert_eq!(

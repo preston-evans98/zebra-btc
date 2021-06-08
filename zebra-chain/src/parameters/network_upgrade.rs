@@ -87,6 +87,12 @@ impl From<ConsensusBranchId> for u32 {
     }
 }
 
+impl From<u32> for ConsensusBranchId {
+    fn from(branch: u32) -> ConsensusBranchId {
+        ConsensusBranchId(branch)
+    }
+}
+
 // /// Network Upgrade Consensus Branch Ids.
 // ///
 // /// Branch ids are the same for mainnet and testnet. If there is a testnet
@@ -131,6 +137,12 @@ impl NetworkUpgrade {
         .iter()
         .cloned()
         .collect()
+    }
+
+    pub fn branch_id(&self) -> u32 {
+        eprintln!("Error: called NetworkUpgrade::branch_id() Branch Ids were introduced in ZIP 200 and do not exist in Bitcoin.");
+        // FIXME
+        0
     }
 
     /// Returns the current network upgrade for `network` and `height`.

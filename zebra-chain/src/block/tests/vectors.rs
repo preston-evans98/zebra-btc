@@ -4,7 +4,6 @@ use std::io::{Cursor, Write};
 use chrono::{DateTime, Duration, LocalResult, TimeZone, Utc};
 
 use crate::{
-    parameters::Network,
     serialization::{sha256d, BitcoinDeserialize, BitcoinDeserializeInto, BitcoinSerialize},
 };
 use crate::{serialization::SmallUnixTime, transaction::LockTime};

@@ -111,12 +111,13 @@ impl Block {
             tx_count.value()
         };
 
-        // Reject empty blocks
-        if tx_count == 0 {
-            return Err(SerializationError::Parse("Block contains no transactions"));
-        }
+        // // Reject empty blocks
+        // TODO: Make a final decision about the usefulness of this check
+        // if tx_count == 0 {
+        //     return Err(SerializationError::Parse("Block contains no transactions"));
+        // }
         // Sanity check number of transactions to prevent DOS attacks
-        else if tx_count > MAX_BLOCK_BYTES / (36 * 4) {
+        if tx_count > MAX_BLOCK_BYTES / (36 * 4) {
             return Err(SerializationError::Parse(
                 "Block contained too many transactions for each to have at least one input",
             ));

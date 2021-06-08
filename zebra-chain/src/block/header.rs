@@ -138,11 +138,6 @@ impl Header {
         self.reported_height.value()
     }
 
-    // pub fn bitcoin_serialize_to_vec(&self) -> Vec<u8> {
-    //     let mut out = Vec::with_capacity(Header::len());
-    //     self.bitcoin_serialize(&mut out);
-    //     out
-    // }
     /// Deserializes a block header from a Buf object, allowing more efficient block hash calculation than vanilla deserialize
     pub fn deserialize_from_buf<B: Buf>(mut src: B) -> Result<Self, SerializationError> {
         if src.remaining() < Header::len() {

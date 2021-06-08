@@ -1,6 +1,6 @@
 use super::{BigUnixTime, CompactInt, SmallUnixTime};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{TimeZone, Utc};
 use std::net::{Ipv6Addr, SocketAddr};
 use std::{
     io,

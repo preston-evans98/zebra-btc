@@ -80,7 +80,7 @@ pub const CURRENT_VERSION: ProtocolVersion = ProtocolVersion(70013);
 //
 // TODO: replace with NetworkUpgrade::current(network, height).
 //       See the detailed comment in handshake.rs, where this constant is used.
-pub const MIN_NETWORK_UPGRADE: NetworkUpgrade = NetworkUpgrade::Canopy;
+pub const MIN_NETWORK_UPGRADE: NetworkUpgrade = NetworkUpgrade::SegWit;
 
 /// The default RTT estimate for peer responses.
 ///

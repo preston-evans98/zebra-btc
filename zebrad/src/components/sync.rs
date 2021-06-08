@@ -696,7 +696,7 @@ mod test {
         // This constraint avoids spurious failures after checkpointing has finished
         assert!(
             BLOCK_VERIFY_TIMEOUT.as_secs()
-                > 2 * NetworkUpgrade::Blossom.target_spacing().num_seconds() as u64,
+                > 2 * NetworkUpgrade::SegWit.target_spacing().num_seconds() as u64,
             "Block verify should allow for at least one new block to be generated and distributed"
         );
     }

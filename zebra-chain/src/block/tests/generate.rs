@@ -95,8 +95,6 @@ fn single_transaction_block(oversized: bool) -> Block {
         data: CoinbaseData(Vec::new()),
         sequence: 0,
     };
-    let input =
-        transparent::Input::bitcoin_deserialize(&zebra_test::vectors::DUMMY_INPUT1[..]).unwrap();
     let output =
         transparent::Output::bitcoin_deserialize(&zebra_test::vectors::DUMMY_OUTPUT1[..]).unwrap();
 

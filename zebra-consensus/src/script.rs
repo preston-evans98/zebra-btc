@@ -92,9 +92,7 @@ where
             upgrade,
         } = req;
         let input = &cached_ffi_transaction.inputs()[input_index];
-        let branch_id = upgrade
-            .branch_id()
-            .expect("post-Sapling NUs have a consensus branch ID");
+        let branch_id = upgrade.branch_id().into();
 
         match input {
             transparent::Input::PrevOut { outpoint, .. } => {

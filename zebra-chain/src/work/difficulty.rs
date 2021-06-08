@@ -304,9 +304,17 @@ impl ExpandedDifficulty {
     pub fn target_difficulty_limit(network: Network) -> ExpandedDifficulty {
         let limit: U256 = match network {
             /* 2^243 - 1 */
-            Network::Mainnet => (U256::one() << 243) - 1,
+            Network::Mainnet => U256::from_str_radix(
+                "00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                16,
+            )
+            .expect("Mainnet difficulty is valid hex number"),
             /* 2^251 - 1 */
-            Network::Testnet => (U256::one() << 251) - 1,
+            Network::Testnet => U256::from_str_radix(
+                "00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                16,
+            )
+            .expect("Testnet difficulty is valid hex number"),
         };
 
         // `zcashd` converts the PoWLimit into a compact representation before

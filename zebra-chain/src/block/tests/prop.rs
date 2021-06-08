@@ -5,7 +5,7 @@ use proptest::{arbitrary::any, prelude::*, test_runner::Config};
 use zebra_test::prelude::*;
 
 use crate::serialization::{BitcoinDeserializeInto, BitcoinSerialize, SerializationError};
-use crate::{block, parameters::Network, transparent::Input::Coinbase, LedgerState};
+use crate::{block, parameters::Network, LedgerState};
 
 use super::super::{serialize::MAX_BLOCK_BYTES, *};
 
@@ -53,7 +53,7 @@ proptest! {
                                           .unwrap_or(16)))]
 
     #[test]
-    fn block_roundtrip(block in any::<Block>(), network in any::<Network>()) {
+    fn block_roundtrip(block in any::<Block>(), _network in any::<Network>()) {
         zebra_test::init();
         let bytes = block.bitcoin_serialize_to_vec()?;
         let bytes = &mut bytes.as_slice();

@@ -124,7 +124,7 @@ mod tests {
             // Check that the version message sent by connect_isolated
             // has the fields specified in the Stolon RFC.
             assert_eq!(version.services, PeerServices::empty());
-            assert_eq!(version.timestamp.timestamp() % (5 * 60), 0);
+            assert_eq!(version.timestamp.0.timestamp() % (5 * 60), 0);
             assert_eq!(
                 version.address_from,
                 (PeerServices::empty(), "0.0.0.0:8333".parse().unwrap())

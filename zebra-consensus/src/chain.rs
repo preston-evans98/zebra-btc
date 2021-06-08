@@ -15,7 +15,7 @@ use tracing::instrument;
 
 use zebra_chain::{
     block::{self, Block},
-    parameters::Network,
+    parameters::{Network, NetworkUpgrade},
 };
 
 use zebra_state as zs;
@@ -133,8 +133,8 @@ where
     let max_checkpoint_height = if config.checkpoint_sync {
         list.max_height()
     } else {
-        list.min_height_in_range(Sapling.activation_height(network).unwrap()..)
-            .expect("hardcoded checkpoint list extends past sapling activation")
+        list.min_height_in_range(NetworkUpgrade::SegWit.activation_height(network).unwrap()..)
+            .expect("hardcoded checkpoint list extends past SegWit activation")
     };
 
     // Correctness:

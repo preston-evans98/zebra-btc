@@ -400,7 +400,7 @@ mod tests {
 
     prop_compose! {
         fn arbitrary_chain_and_count()
-            (chain in arbitrary_chain(NetworkUpgrade::Blossom.activation_height(Network::Mainnet).unwrap()))
+            (chain in arbitrary_chain(NetworkUpgrade::BIP34.activation_height(Network::Mainnet).unwrap()))
             (count in 1..chain.len(), chain in Just(chain)) -> (SummaryDebug<Vec<Arc<Block>>>, usize)
         {
             (SummaryDebug(chain), count)

@@ -242,27 +242,27 @@ fn checkpoint_list_load_hard_coded() -> Result<(), BoxError> {
 
 #[test]
 fn checkpoint_list_hard_coded_sapling_mainnet() -> Result<(), BoxError> {
-    checkpoint_list_hard_coded_sapling(Mainnet)
+    checkpoint_list_hard_coded_segwit(Mainnet)
 }
 
 #[test]
 fn checkpoint_list_hard_coded_sapling_testnet() -> Result<(), BoxError> {
-    checkpoint_list_hard_coded_sapling(Testnet)
+    checkpoint_list_hard_coded_segwit(Testnet)
 }
 
 /// Check that the hard-coded lists cover the Sapling network upgrade
-fn checkpoint_list_hard_coded_sapling(network: Network) -> Result<(), BoxError> {
+fn checkpoint_list_hard_coded_segwit(network: Network) -> Result<(), BoxError> {
     zebra_test::init();
 
-    let sapling_activation = Sapling
+    let sapling_activation = SegWit
         .activation_height(network)
-        .expect("Unexpected network upgrade info: Sapling must have an activation height");
+        .expect("Unexpected network upgrade info: SegWit must have an activation height");
 
     let list = CheckpointList::new(network);
 
     assert!(
         list.max_height() >= sapling_activation,
-        "Pre-Sapling blocks must be verified by checkpoints"
+        "Pre-SegWit blocks must be verified by checkpoints"
     );
 
     Ok(())

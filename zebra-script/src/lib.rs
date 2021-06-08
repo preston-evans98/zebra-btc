@@ -204,9 +204,7 @@ mod tests {
             lock_script: transparent::Script(SCRIPT_PUBKEY.clone()),
         };
         let input_index = 0;
-        let branch_id = Blossom
-            .branch_id()
-            .expect("Blossom has a ConsensusBranchId");
+        let branch_id = SegWit.branch_id().into();
 
         let verifier = super::CachedFfiTransaction::new(transaction);
         verifier.is_valid(branch_id, (input_index, output))?;
@@ -227,9 +225,7 @@ mod tests {
             lock_script: transparent::Script(SCRIPT_PUBKEY.clone()),
         };
         let input_index = 0;
-        let branch_id = Blossom
-            .branch_id()
-            .expect("Blossom has a ConsensusBranchId");
+        let branch_id = SegWit.branch_id().into();
 
         let verifier = super::CachedFfiTransaction::new(transaction);
         verifier
@@ -250,9 +246,7 @@ mod tests {
         let verifier = super::CachedFfiTransaction::new(transaction);
 
         let input_index = 0;
-        let branch_id = Blossom
-            .branch_id()
-            .expect("Blossom has a ConsensusBranchId");
+        let branch_id = SegWit.branch_id().into();
 
         let amount = 212 * coin;
         let output = transparent::Output {
@@ -282,9 +276,7 @@ mod tests {
         let verifier = super::CachedFfiTransaction::new(transaction);
 
         let input_index = 0;
-        let branch_id = Blossom
-            .branch_id()
-            .expect("Blossom has a ConsensusBranchId");
+        let branch_id = SegWit.branch_id().into();
 
         let amount = 212 * coin;
         let output = transparent::Output {
@@ -316,9 +308,7 @@ mod tests {
         let verifier = super::CachedFfiTransaction::new(transaction);
 
         let input_index = 0;
-        let branch_id = Blossom
-            .branch_id()
-            .expect("Blossom has a ConsensusBranchId");
+        let branch_id = SegWit.branch_id().into();
 
         let amount = 211 * coin;
         let output = transparent::Output {
@@ -350,9 +340,7 @@ mod tests {
         let verifier = super::CachedFfiTransaction::new(transaction);
 
         let input_index = 0;
-        let branch_id = Blossom
-            .branch_id()
-            .expect("Blossom has a ConsensusBranchId");
+        let branch_id = SegWit.branch_id().into();
 
         let amount = 211 * coin;
         let output = transparent::Output {

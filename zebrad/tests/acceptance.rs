@@ -844,12 +844,12 @@ fn create_cached_database_height(network: Network, height: Height) -> Result<()>
 }
 
 fn create_cached_database(network: Network) -> Result<()> {
-    let height = NetworkUpgrade::Sapling.activation_height(network).unwrap();
+    let height = NetworkUpgrade::SegWit.activation_height(network).unwrap();
     create_cached_database_height(network, height)
 }
 
-fn sync_past_sapling(network: Network) -> Result<()> {
-    let height = NetworkUpgrade::Sapling.activation_height(network).unwrap() + 1200;
+fn sync_past_segwit(network: Network) -> Result<()> {
+    let height = NetworkUpgrade::SegWit.activation_height(network).unwrap() + 1200;
     create_cached_database_height(network, height.unwrap())
 }
 
@@ -860,17 +860,17 @@ fn sync_past_sapling(network: Network) -> Result<()> {
 // drives populated by the first two tests, snapshot those drives, and then use
 // those to more quickly run the second two tests.
 
-// Sync up to the sapling activation height on mainnet and stop.
+// Sync up to the segwit activation height on mainnet and stop.
 #[cfg_attr(feature = "test_sync_to_sapling_mainnet", test)]
-fn sync_to_sapling_mainnet() {
+fn sync_to_segwit_mainnet() {
     zebra_test::init();
     let network = Mainnet;
     create_cached_database(network).unwrap();
 }
 
-// Sync to the sapling activation height testnet and stop.
+// Sync to the sapling segwit height testnet and stop.
 #[cfg_attr(feature = "test_sync_to_sapling_testnet", test)]
-fn sync_to_sapling_testnet() {
+fn sync_to_segwit_testnet() {
     zebra_test::init();
     let network = Testnet;
     create_cached_database(network).unwrap();
@@ -882,10 +882,10 @@ fn sync_to_sapling_testnet() {
 /// activation on mainnet. If the state has already synced past Sapling
 /// activation by 1200 blocks, it will fail.
 #[cfg_attr(feature = "test_sync_past_sapling_mainnet", test)]
-fn sync_past_sapling_mainnet() {
+fn sync_past_segwit_mainnet() {
     zebra_test::init();
     let network = Mainnet;
-    sync_past_sapling(network).unwrap();
+    sync_past_segwit(network).unwrap();
 }
 
 /// Test syncing 1200 blocks (3 checkpoints) past the last checkpoint on testnet.
@@ -894,10 +894,10 @@ fn sync_past_sapling_mainnet() {
 /// activation on testnet. If the state has already synced past Sapling
 /// activation by 1200 blocks, it will fail.
 #[cfg_attr(feature = "test_sync_past_sapling_testnet", test)]
-fn sync_past_sapling_testnet() {
+fn sync_past_segwit_testnet() {
     zebra_test::init();
     let network = Testnet;
-    sync_past_sapling(network).unwrap();
+    sync_past_segwit(network).unwrap();
 }
 
 /// Returns a random port number from the ephemeral port range.
