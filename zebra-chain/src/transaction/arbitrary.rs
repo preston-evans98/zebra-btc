@@ -7,7 +7,7 @@ use proptest::{arbitrary::any, collection::vec, prelude::*};
 use crate::{block, parameters::NetworkUpgrade, serialization::SmallUnixTime, transparent};
 use crate::{cached::Cached, LedgerState};
 
-use super::{LockTime, Memo, Transaction};
+use super::{LockTime, Transaction};
 
 impl Transaction {
     /// Generate a proptest strategy for V1 Transactions
@@ -65,21 +65,21 @@ impl Transaction {
     }
 }
 
-impl Arbitrary for Memo {
-    type Parameters = ();
+// impl Arbitrary for Memo {
+//     type Parameters = ();
 
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        (vec(any::<u8>(), 512))
-            .prop_map(|v| {
-                let mut bytes = [0; 512];
-                bytes.copy_from_slice(v.as_slice());
-                Memo(Box::new(bytes))
-            })
-            .boxed()
-    }
+//     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+//         (vec(any::<u8>(), 512))
+//             .prop_map(|v| {
+//                 let mut bytes = [0; 512];
+//                 bytes.copy_from_slice(v.as_slice());
+//                 Memo(Box::new(bytes))
+//             })
+//             .boxed()
+//     }
 
-    type Strategy = BoxedStrategy<Self>;
-}
+//     type Strategy = BoxedStrategy<Self>;
+// }
 
 impl Arbitrary for LockTime {
     type Parameters = ();

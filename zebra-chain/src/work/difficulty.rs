@@ -125,10 +125,9 @@ impl fmt::Debug for ExpandedDifficulty {
 /// choose the best chain. But its precise value and bit pattern are not
 /// consensus-critical.
 ///
-/// We calculate work values according to the Zcash specification, but store
-/// them as u128, rather than the implied u256. We don't expect the total chain
-/// work to ever exceed 2^128. The current total chain work for Zcash is 2^58,
-/// and Bitcoin adds around 2^91 work per year. (Each extra bit represents twice
+/// We store work values as u128, rather than the implied u256,
+/// because we don't expect the total chain work to ever exceed 2^128.
+/// Bitcoin adds around 2^91 work per year. (Each extra bit represents twice
 /// as much work.)
 #[derive(Clone, Copy, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Work(u128);

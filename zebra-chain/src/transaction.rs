@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 
 mod hash;
 mod lock_time;
-mod memo;
 mod serialize;
 
 #[cfg(any(test, feature = "proptest-impl"))]
@@ -17,7 +16,6 @@ mod tests;
 
 pub use hash::Hash;
 pub use lock_time::LockTime;
-pub use memo::Memo;
 
 use crate::transparent;
 

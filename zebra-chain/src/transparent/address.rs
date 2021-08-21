@@ -307,7 +307,7 @@ mod tests {
 
         let t_addr = script.to_address(Network::Mainnet);
 
-        assert_eq!(format!("{}", t_addr), "t3Y5pHwfgHbS6pDjj1HLuMFxhFFip1fcJ6g");
+        assert_eq!(format!("{}", t_addr), "3FDDHcFYKGeWDagq4rXnDSrmzbXjDhP97D");
     }
 
     #[test]
@@ -318,27 +318,27 @@ mod tests {
 
         let t_addr = script.to_address(Network::Testnet);
 
-        assert_eq!(format!("{}", t_addr), "t2L51LcmpA43UMvKTw2Lwtt9LMjwyqU2V1P");
+        assert_eq!(format!("{}", t_addr), "2N6mRMMBZvj9rRNKNjz9eqPr3CwjtzggLTT");
     }
 
     #[test]
     fn from_string() {
         zebra_test::init();
 
-        let t_addr: Address = "t3Vz22vK5z2LcKEdg16Yv4FFneEL1zg9ojd".parse().unwrap();
+        let t_addr: Address = "3Q7achm1qfMPzMiKQYafAPcPhn3hvcBaRL".parse().unwrap();
 
-        assert_eq!(format!("{}", t_addr), "t3Vz22vK5z2LcKEdg16Yv4FFneEL1zg9ojd");
+        assert_eq!(format!("{}", t_addr), "3Q7achm1qfMPzMiKQYafAPcPhn3hvcBaRL");
     }
 
     #[test]
     fn debug() {
         zebra_test::init();
 
-        let t_addr: Address = "t3Vz22vK5z2LcKEdg16Yv4FFneEL1zg9ojd".parse().unwrap();
+        let addr: Address = "3Q7achm1qfMPzMiKQYafAPcPhn3hvcBaRL".parse().unwrap();
 
         assert_eq!(
-            format!("{:?}", t_addr),
-            "TransparentAddress { network: Mainnet, script_hash: \"7d46a730d31f97b1930d3368a967c309bd4d136a\" }"
+            format!("{:?}", addr),
+            "TransparentAddress { network: Mainnet, script_hash: \"f5f80a632ec39691cd1a9a268ff854c210773bfd\" }"
         );
     }
 }
